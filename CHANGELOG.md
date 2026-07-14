@@ -1,5 +1,13 @@
 # Changelog
 
+## [5.0.2] - 2026-07-14
+
+### Fixed
+- PowerShell array enumeration bug: `Get-Printers`, `Get-PrinterShareStatus`, `Get-PrinterSharingCompatibility`, `Get-PrintComplianceReport` and `Get-SmbSharePermissions` now return a real array via the `return ,@(...)` idiom (previously collapsed to a scalar when 0/1 printers existed).
+- `Write-MenuHeader`/`Wait-Menu` guard `Clear-Host`/`ReadKey` so they do not throw "CursorPosition: handle is invalid" in non-interactive hosts.
+- Pester tests: `Test-Administrator` assertion corrected; `Assert-Elevated` mocks scoped with `-ModuleName`.
+- CI matrix sets `fail-fast: false` so PowerShell 5.1 and 7.4 report independently.
+
 ## [5.0.1] - 2026-07-14
 
 ### Added

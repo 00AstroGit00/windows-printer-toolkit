@@ -1,13 +1,13 @@
 <#
 .SYNOPSIS
-    PrinterToolkit v5.0.1 - Root module that loads all submodules.
+    PrinterToolkit v5.0.2 - Root module that loads all submodules.
 
 .DESCRIPTION
     Enterprise Windows printer troubleshooting toolkit.
     Auto-discovers and imports all modules from the Modules/ directory.
 
 .NOTES
-    Version: 5.0.1
+    Version: 5.0.2
     Author: PrinterToolkit Contributors
 #>
 
@@ -44,7 +44,7 @@ foreach ($modPath in $ModulePaths) {
     }
 }
 
-$Script:ToolkitVersion = '5.0.1'
+$Script:ToolkitVersion = '5.0.2'
 $Script:LoadedModules = $LoadedModules
 $Script:FailedModules = $FailedModules
 
@@ -69,7 +69,7 @@ function Invoke-ToolkitMainMenu {
     param()
 
     if (-not (Test-Administrator)) {
-        Write-Host 'PrinterToolkit v5.0.1' -ForegroundColor Cyan
+        Write-Host 'PrinterToolkit v5.0.2' -ForegroundColor Cyan
         Write-Host '====================' -ForegroundColor Cyan
         Write-Host 'NOTE: Some operations require Administrator privileges.' -ForegroundColor Yellow
         Write-Host 'Run as Administrator for full functionality.' -ForegroundColor Yellow
@@ -81,7 +81,7 @@ function Invoke-ToolkitMainMenu {
         Clear-Host
         Write-Host ''
         Write-Host '========================================' -ForegroundColor Cyan
-        Write-Host '    PrinterToolkit v5.0.1' -ForegroundColor White
+        Write-Host '    PrinterToolkit v5.0.2' -ForegroundColor White
         Write-Host '    Enterprise Printer Management' -ForegroundColor Gray
         Write-Host '========================================' -ForegroundColor Cyan
         Write-Host ''
