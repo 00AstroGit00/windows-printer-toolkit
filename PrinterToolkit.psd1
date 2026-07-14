@@ -1,7 +1,6 @@
 @{
     RootModule           = 'PrinterToolkit.psm1'
     ModuleVersion        = '5.0.1'
-    CompatiblePSVersions = @('5.1', '7.0', '7.1', '7.2', '7.3', '7.4')
     GUID                 = 'e8c4a1d7-2b9f-4e3c-9a0d-6f8b1c5d7e3a'
     Author               = 'PrinterToolkit Contributors'
     CompanyName          = 'PrinterToolkit'
