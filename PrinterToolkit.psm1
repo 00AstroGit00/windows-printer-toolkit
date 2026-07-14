@@ -261,4 +261,4 @@ function Pause {
     $null = $Host.UI.RawUI.ReadKey('NoEcho,IncludeKeyDown')
 }
 
-Export-ModuleMember -Function Get-ToolkitStatus, Invoke-ToolkitMainMenu
+# Exports controlled by PrinterToolkit.psd1 FunctionsToExport
