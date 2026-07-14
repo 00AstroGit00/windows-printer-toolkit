@@ -40,7 +40,7 @@ function Get-PrinterShareStatus {
         }
     }
 
-    return ,$results
+    return ,@($results)
 }
 
 function Enable-PrinterSharing {
@@ -125,7 +125,7 @@ function Get-SmbSharePermissions {
         }
     }
 
-    return ,$results
+    return ,@($results)
 }
 
 function Set-PrinterSharePermission {
@@ -234,7 +234,7 @@ function Get-PrinterSharingCompatibility {
         }
     }
 
-    return ,$results
+    return ,@($results)
 }
 
 Export-ModuleMember -Function Get-PrinterShareStatus, Enable-PrinterSharing, Disable-PrinterSharing, Get-SmbSharePermissions, Set-PrinterSharePermission, Set-PrinterSharingTransport, Get-PrinterSharingCompatibility

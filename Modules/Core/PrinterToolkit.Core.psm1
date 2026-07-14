@@ -145,9 +145,9 @@ function Get-Printers {
     [OutputType([array])]
     param()
     try {
-        return @(Get-Printer -ErrorAction SilentlyContinue)
+        return ,@(Get-Printer -ErrorAction SilentlyContinue)
     } catch {
-        return @()
+        return ,@()
     }
 }
 

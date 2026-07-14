@@ -251,7 +251,7 @@ function Get-PrintComplianceReport {
         }
     }
 
-    return ,$results
+    return ,@($results)
 }
 
 Export-ModuleMember -Function New-PrinterReport, Get-PrintComplianceReport
