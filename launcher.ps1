@@ -45,9 +45,9 @@ try {
 }
 
 if (-not $Quiet) {
-    $host.UI.RawUI.WindowTitle = "PrinterToolkit v5.0.1 - Enterprise Printer Management"
-    Write-Host 'PrinterToolkit v5.0.1' -ForegroundColor Cyan
-    Write-Host 'Enterprise Printer Management Toolkit' -ForegroundColor Gray
+    $host.UI.RawUI.WindowTitle = "PrinterToolkit v8.0.0 - Print Server Deployment Platform"
+Write-Host 'PrinterToolkit v8.0.0' -ForegroundColor Cyan
+Write-Host 'Print Server Deployment Platform' -ForegroundColor Gray
     $status = Get-ToolkitStatus
     Write-Host "Loaded $($status.LoadedModules.Count) module(s)" -ForegroundColor Gray
 }

@@ -1,10 +1,11 @@
 <#
 .SYNOPSIS
-    Reporting engine for PrinterToolkit.
+    Reporting engine for PrinterToolkit v6.0.
 
 .DESCRIPTION
-    Generates HTML, JSON, CSV, and interactive reports from diagnostic data.
-    Supports summary views, detailed printer inventory, and compliance checks.
+    Generates HTML, JSON, CSV, and Markdown reports from diagnostic data.
+    Supports summary views, detailed printer inventory, compliance checks,
+    validation dashboards, and QR code connectivity reports.
 
 .NOTES
     Module: PrinterToolkit.Reporting
@@ -18,10 +19,12 @@ function New-PrinterReport {
     [OutputType([string])]
     param(
         [Parameter(Mandatory = $false)]
-        [ValidateSet('HTML', 'JSON', 'CSV', 'All')]
+        [ValidateSet('HTML', 'JSON', 'CSV', 'Markdown', 'All')]
         [string]$Format = 'HTML',
         [Parameter(Mandatory = $false)]
-        [string]$OutputPath
+        [string]$OutputPath,
+        [Parameter(Mandatory = $false)]
+        [switch]$IncludeValidation
     )
 
     $stamp = Get-Date -Format 'yyyyMMdd_HHmmss'
@@ -31,6 +34,10 @@ function New-PrinterReport {
     $null = New-Item -ItemType Directory -Force -Path $OutputPath
 
     $data = Get-PrinterReportData
+    if ($IncludeValidation) {
+        $data | Add-Member -MemberType NoteProperty -Name 'Validation' -Value (Invoke-EndToEndValidation)
+    }
+
     $files = @()
 
     switch ($Format) {
@@ -46,10 +53,15 @@ function New-PrinterReport {
             $f = New-PrinterReportCsv -Data $data -OutputPath $OutputPath
             $files += $f
         }
+        'Markdown' {
+            $f = New-PrinterReportMarkdown -Data $data -OutputPath $OutputPath
+            $files += $f
+        }
         'All' {
             $files += New-PrinterReportHtml -Data $data -OutputPath $OutputPath
             $files += New-PrinterReportJson -Data $data -OutputPath $OutputPath
             $files += New-PrinterReportCsv -Data $data -OutputPath $OutputPath
+            $files += New-PrinterReportMarkdown -Data $data -OutputPath $OutputPath
         }
     }
 
@@ -104,7 +116,7 @@ function Get-PrinterReportData {
     $cs = Get-CimInstance -ClassName Win32_ComputerSystem -ErrorAction SilentlyContinue
 
     [PSCustomObject]@{
-        ReportTitle      = 'PrinterToolkit Printer Report'
+        ReportTitle      = 'PrinterToolkit Print Server Report'
         GeneratedAt      = &$Script:ReportTimestamp
         ComputerName     = $env:COMPUTERNAME
         OS               = if ($os) { "$($os.Caption) $($os.Version)" } else { 'Unknown' }
@@ -117,6 +129,7 @@ function Get-PrinterReportData {
         Type3Drivers     = @($drivers | Where-Object { $_.MajorVersion -lt 4 }).Count
         TotalPorts       = $ports.Count
         PrinterDetails   = @($printerDetail)
+        ToolkitVersion   = '6.0.0'
     }
 }
 
@@ -144,13 +157,42 @@ function New-PrinterReportHtml {
 "@
     }
 
+    $validationSection = ''
+    if ($Data.Validation) {
+        $v = $Data.Validation
+        $scoreColor = if ($v.OverallScore -ge 80) { 'green' } elseif ($v.OverallScore -ge 50) { 'orange' } else { 'red' }
+        $validationSection = @"
+    <h2>Validation Dashboard</h2>
+    <div style="text-align:center;margin:20px 0;padding:20px;background:linear-gradient(135deg,#667eea,#764ba2);color:#fff;border-radius:8px;">
+        <div style="font-size:48px;font-weight:bold;">$($v.OverallScore)%</div>
+        <div style="font-size:18px;">$($v.PassCount)/$($v.TotalChecks) Checks Passed</div>
+        <div style="font-size:14px;margin-top:5px;color:$(if($v.AllPassed){'#a5d6a7'}else{'#ef9a9a'})">$(if($v.AllPassed){'ALL CHECKS PASSED'}else{'SOME CHECKS FAILED'})</div>
+    </div>
+    <table>
+        <thead><tr><th>Component</th><th>Check</th><th>Status</th><th>Detail</th></tr></thead>
+        <tbody>
+"@
+        foreach ($c in $v.Checks) {
+            $statusStyle = if ($c.Status -eq 'PASS') { 'color:green;' } else { 'color:red;' }
+            $validationSection += @"
+        <tr>
+            <td>$($c.Component)</td>
+            <td>$($c.Check)</td>
+            <td style="$statusStyle font-weight:bold">$($c.Status)</td>
+            <td>$($c.Detail)</td>
+        </tr>
+"@
+        }
+        $validationSection += '</tbody></table>'
+    }
+
     $html = @"
 <!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>PrinterToolkit Report</title>
+<title>PrinterToolkit Report - $($Data.ComputerName)</title>
 <style>
     body { font-family: 'Segoe UI',Arial,sans-serif; margin: 20px; background: #f5f5f5; }
     .container { max-width: 1200px; margin: 0 auto; background: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
@@ -165,12 +207,15 @@ function New-PrinterReportHtml {
     .stat-card .number { font-size: 32px; font-weight: bold; }
     .stat-card .label { font-size: 14px; opacity: 0.9; margin-top: 5px; }
     .footer { margin-top: 30px; color: #7f8c8d; font-size: 12px; text-align: center; }
+    .badge { display:inline-block; padding:2px 8px; border-radius:4px; font-size:11px; font-weight:600; }
+    .badge-pass { background:#c8e6c9; color:#2e7d32; }
+    .badge-fail { background:#ffcdd2; color:#c62828; }
 </style>
 </head>
 <body>
 <div class="container">
     <h1>$($Data.ReportTitle)</h1>
-    <p>Computer: <strong>$($Data.ComputerName)</strong> | Generated: <strong>$($Data.GeneratedAt)</strong></p>
+    <p>Computer: <strong>$($Data.ComputerName)</strong> | Generated: <strong>$($Data.GeneratedAt)</strong> | Toolkit: <strong>v$($Data.ToolkitVersion)</strong></p>
     <p>OS: $($Data.OS) | Model: $($Data.Manufacturer) $($Data.Model)</p>
 
     <div class="summary-grid">
@@ -186,7 +231,9 @@ function New-PrinterReportHtml {
         <tbody>$printerRows</tbody>
     </table>
 
-    <div class="footer">Generated by PrinterToolkit v5.0.1 | PrinterToolkit Report</div>
+    $validationSection
+
+    <div class="footer">Generated by PrinterToolkit v$($Data.ToolkitVersion) | Print Server Deployment Platform</div>
 </div>
 </body>
 </html>
@@ -200,7 +247,7 @@ function New-PrinterReportJson {
     param($Data, $OutputPath)
 
     $filePath = Join-Path -Path $OutputPath -ChildPath "PrinterReport_$($Data.ComputerName)_$(Get-Date -Format 'yyyyMMdd_HHmmss').json"
-    $Data | ConvertTo-Json -Depth 4 | Out-File -FilePath $filePath -Encoding UTF8
+    $Data | ConvertTo-Json -Depth 6 | Out-File -FilePath $filePath -Encoding UTF8
     return $filePath
 }
 
@@ -209,6 +256,59 @@ function New-PrinterReportCsv {
 
     $filePath = Join-Path -Path $OutputPath -ChildPath "PrinterReport_$($Data.ComputerName)_$(Get-Date -Format 'yyyyMMdd_HHmmss').csv"
     $Data.PrinterDetails | Export-Csv -Path $filePath -NoTypeInformation -Encoding UTF8
+    return $filePath
+}
+
+function New-PrinterReportMarkdown {
+    param($Data, $OutputPath)
+
+    $filePath = Join-Path -Path $OutputPath -ChildPath "PrinterReport_$($Data.ComputerName)_$(Get-Date -Format 'yyyyMMdd_HHmmss').md"
+
+    $md = @"
+# PrinterToolkit Print Server Report
+
+**Computer:** $($Data.ComputerName)
+**Generated:** $($Data.GeneratedAt)
+**Toolkit:** v$($Data.ToolkitVersion)
+**OS:** $($Data.OS)
+
+## Summary
+
+| Metric | Value |
+|--------|-------|
+| Total Printers | $($Data.TotalPrinters) |
+| Shared Printers | $($Data.SharedPrinters) |
+| Total Drivers | $($Data.TotalDrivers) |
+| Type 4 Drivers | $($Data.Type4Drivers) |
+| Type 3 Drivers | $($Data.Type3Drivers) |
+
+## Printer Inventory
+
+| Name | Shared | Share Name | Port | Driver | Type | Status |
+|------|--------|------------|------|--------|------|--------|
+"@
+
+    foreach ($p in $Data.PrinterDetails) {
+        $md += "| $($p.Name) | $($p.Shared) | $($p.ShareName) | $($p.PortName) | $($p.DriverName) | $($p.DriverType) | $($p.PrinterStatus) |`n"
+    }
+
+    if ($Data.Validation) {
+        $v = $Data.Validation
+        $md += @"
+
+## Validation Dashboard
+
+**Overall Score:** $($v.OverallScore)% ($($v.PassCount)/$($v.TotalChecks) passed)
+
+| Component | Check | Status | Detail |
+|-----------|-------|--------|--------|
+"@
+        foreach ($c in $v.Checks) {
+            $md += "| $($c.Component) | $($c.Check) | $($c.Status) | $($c.Detail) |`n"
+        }
+    }
+
+    $md | Out-File -FilePath $filePath -Encoding UTF8
     return $filePath
 }
 

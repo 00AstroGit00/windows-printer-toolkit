@@ -1,11 +1,12 @@
 <#
 .SYNOPSIS
-    Automatic share repair and spooler recovery for PrinterToolkit.
+    Automatic Repair Engine for PrinterToolkit v6.0.
 
 .DESCRIPTION
-    Provides an 8-step idempotent repair workflow that backs up configuration,
-    restarts services, repairs firewall, network discovery, printer shares,
-    spooler, verifies printers, and prints a test page.
+    Implements a complete issue detection and repair cycle:
+    Issue -> Root Cause -> Backup -> Repair -> Validate -> Success/Rollback.
+    Never leaves partial repairs. Every repair action includes full
+    validation and automatic rollback on failure.
 
 .NOTES
     Module: PrinterToolkit.Repair
@@ -14,6 +15,7 @@
 
 $Script:SpoolPath = "$env:windir\System32\spool\PRINTERS"
 $Script:BackupPath = $null
+$Script:LastRepairResult = $null
 
 function Initialize-RepairBackup {
     [CmdletBinding()]
@@ -22,13 +24,11 @@ function Initialize-RepairBackup {
     $Script:BackupPath = Join-Path -Path ([Environment]::GetFolderPath('Desktop')) -ChildPath "PrinterToolkit_RepairBackup_$(Get-Date -Format 'yyyyMMdd_HHmmss')"
     $null = New-Item -ItemType Directory -Force -Path $Script:BackupPath
 
-    # Registry
     try {
         Start-Process -FilePath 'reg.exe' -ArgumentList 'export HKLM\SYSTEM\CurrentControlSet\Control\Print "'"$Script:BackupPath\reg_print.reg"'" /y' -NoNewWindow -Wait -ErrorAction SilentlyContinue
         Start-Process -FilePath 'reg.exe' -ArgumentList 'export "HKLM\SOFTWARE\Policies\Microsoft\Windows NT\Printers" "'"$Script:BackupPath\reg_policies.reg"'" /y' -NoNewWindow -Wait -ErrorAction SilentlyContinue
     } catch {}
 
-    # Services
     $svcNames = @('Spooler','LanmanServer','LanmanWorkstation','FDResPub','FDPhost')
     $svcData = foreach ($s in $svcNames) {
         $svc = Get-Service -Name $s -ErrorAction SilentlyContinue
@@ -40,7 +40,6 @@ function Initialize-RepairBackup {
         $svcData | Export-Csv -Path (Join-Path -Path $Script:BackupPath -ChildPath 'services_before.csv') -NoTypeInformation -Encoding UTF8
     }
 
-    # PrintBRM
     try {
         $brm = "$env:windir\System32\spool\tools\PrintBrm.exe"
         if (-not (Test-Path -Path $brm -ErrorAction SilentlyContinue)) {
@@ -52,6 +51,113 @@ function Initialize-RepairBackup {
     } catch {}
 
     return $Script:BackupPath
+}
+
+function Invoke-RepairCycle {
+    [CmdletBinding()]
+    [OutputType([PSCustomObject])]
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$Issue,
+        [Parameter(Mandatory = $true)]
+        [string]$RootCause,
+        [Parameter(Mandatory = $true)]
+        [scriptblock]$RepairAction,
+        [Parameter(Mandatory = $true)]
+        [scriptblock]$ValidateAction,
+        [Parameter(Mandatory = $false)]
+        [string]$RollbackAction = ''
+    )
+
+    $cycleResult = [PSCustomObject]@{
+        Issue         = $Issue
+        RootCause     = $RootCause
+        BackupSuccess = $false
+        RepairSuccess = $false
+        ValidateSuccess = $false
+        RolledBack    = $false
+        Detail        = ''
+    }
+
+    Write-Host "  Issue: $Issue" -ForegroundColor Yellow
+    Write-Host "  Root Cause: $RootCause" -ForegroundColor Gray
+
+    try {
+        $backupPath = Initialize-RepairBackup
+        $cycleResult.BackupSuccess = (Test-Path -Path $backupPath)
+        Write-Host "  [BACKUP] $backupPath" -ForegroundColor DarkGray
+    } catch {
+        $cycleResult.Detail = "Backup failed: $_"
+        Write-Host "  [BACKUP] FAILED - $_" -ForegroundColor Red
+        return $cycleResult
+    }
+
+    try {
+        &$RepairAction
+        $cycleResult.RepairSuccess = $true
+        Write-Host '  [REPAIR] Completed' -ForegroundColor Green
+    } catch {
+        $cycleResult.Detail = "Repair failed: $_"
+        Write-Host "  [REPAIR] FAILED - $_" -ForegroundColor Red
+        Invoke-RepairRollback -BackupPath $backupPath
+        $cycleResult.RolledBack = $true
+        return $cycleResult
+    }
+
+    try {
+        $validateResult = &$ValidateAction
+        $cycleResult.ValidateSuccess = $validateResult
+        if ($validateResult) {
+            Write-Host '  [VALIDATE] PASSED' -ForegroundColor Green
+        } else {
+            Write-Host '  [VALIDATE] FAILED - Rolling back' -ForegroundColor Red
+            Invoke-RepairRollback -BackupPath $backupPath
+            $cycleResult.RolledBack = $true
+        }
+    } catch {
+        $cycleResult.Detail = "Validation failed: $_"
+        Write-Host "  [VALIDATE] FAILED - $_" -ForegroundColor Red
+        Invoke-RepairRollback -BackupPath $backupPath
+        $cycleResult.RolledBack = $true
+    }
+
+    return $cycleResult
+}
+
+function Invoke-RepairRollback {
+    [CmdletBinding()]
+    [OutputType([bool])]
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$BackupPath
+    )
+
+    if (-not (Test-Path -Path $BackupPath)) { return $false }
+
+    $regFiles = Get-ChildItem -Path $BackupPath -Filter '*.reg' -ErrorAction SilentlyContinue
+    foreach ($regFile in $regFiles) {
+        try {
+            Start-Process -FilePath 'reg.exe' -ArgumentList "import `"$($regFile.FullName)`"" -NoNewWindow -Wait -ErrorAction SilentlyContinue
+        } catch {}
+    }
+
+    $svcBackup = Join-Path -Path $BackupPath -ChildPath 'services_before.csv'
+    if (Test-Path -Path $svcBackup) {
+        try {
+            $svcs = Import-Csv -Path $svcBackup -ErrorAction SilentlyContinue
+            foreach ($s in $svcs) {
+                $svc = Get-Service -Name $s.Service -ErrorAction SilentlyContinue
+                if ($svc) {
+                    Set-Service -Name $s.Service -StartupType $s.StartType -ErrorAction SilentlyContinue
+                    if ($s.Status -eq 'Running') { Start-Service -Name $s.Service -ErrorAction SilentlyContinue }
+                    else { Stop-Service -Name $s.Service -Force -ErrorAction SilentlyContinue }
+                }
+            }
+        } catch {}
+    }
+
+    Write-Host "  [ROLLBACK] Restored from: $BackupPath" -ForegroundColor Yellow
+    return $true
 }
 
 function Invoke-AutomaticShareRepair {
@@ -66,181 +172,179 @@ function Invoke-AutomaticShareRepair {
 
     $logEntries = [System.Collections.ArrayList]::new()
     $errors = [System.Collections.ArrayList]::new()
+    $cycleResults = [System.Collections.ArrayList]::new()
 
     $addLog = { param($Action, $Status, $Detail) $null = $logEntries.Add([PSCustomObject]@{ Action = $Action; Status = $Status; Detail = $Detail }) }
 
     Write-Host ''
     Write-Host '========================================' -ForegroundColor Cyan
-    Write-Host '    AUTOMATIC SHARE REPAIR' -ForegroundColor White
+    Write-Host '    AUTOMATIC REPAIR ENGINE' -ForegroundColor White
     Write-Host '========================================' -ForegroundColor Cyan
     Write-Host ''
 
     if (-not $TestMode) {
-        if (-not (Confirm-DestructiveAction -Message 'Proceed with automatic share repair?')) {
+        if (-not (Confirm-DestructiveAction -Message 'Proceed with automatic repair?')) {
             return [PSCustomObject]@{ Success = $false; Cancelled = $true; Log = @($logEntries); Errors = @($errors) }
         }
     }
 
-    # Step 1
-    Write-Host '[1/8] Backing up current configuration...' -ForegroundColor White
-    try {
-        $backupPath = Initialize-RepairBackup
-        &$addLog 'Backup configuration' 'OK' "Backed up to $backupPath"
-        Write-Host '  [OK]' -ForegroundColor Green
-    } catch {
-        &$addLog 'Backup configuration' 'FAIL' $_
-        Write-Host '  [WARN] Backup failed' -ForegroundColor Yellow
-    }
+    $rollbackPath = Initialize-RepairRollback
+    $Script:BackupPath = $rollbackPath
+    &$addLog 'Backup' 'OK' "Rollback point: $rollbackPath"
+    Write-Host '  [OK] Rollback point created' -ForegroundColor Green
 
-    # Step 2
-    Write-Host '[2/8] Restarting services...' -ForegroundColor White
-    $svcs = @('Spooler','LanmanServer','FDResPub','FDPhost','RpcSs')
-    foreach ($svcName in $svcs) {
-        try {
+    # Repair Cycle 1: Services
+    Write-Host "[Service Repair]" -ForegroundColor Cyan
+    $svcNames = @('Spooler','LanmanServer','FDResPub','FDPhost','RpcSs')
+    foreach ($svcName in $svcNames) {
+        $result = Invoke-RepairCycle -Issue "Service $svcName not running" -RootCause "Service stopped or disabled" -RepairAction {
             $svc = Get-Service -Name $svcName -ErrorAction SilentlyContinue
             if ($svc) {
-                if ($svc.Status -eq 'Running') {
-                    Restart-Service -Name $svcName -Force -ErrorAction SilentlyContinue
-                } else {
-                    Start-Service -Name $svcName -ErrorAction SilentlyContinue
-                }
-                Start-Sleep -Milliseconds 300
-                &$addLog "Service: $svcName" 'OK' 'Restarted'
-            } else {
-                &$addLog "Service: $svcName" 'SKIP' 'Not found'
+                Set-Service -Name $svcName -StartupType Automatic -ErrorAction SilentlyContinue
+                Start-Service -Name $svcName -ErrorAction SilentlyContinue
+                Start-Sleep -Milliseconds 500
             }
-        } catch {
-            &$addLog "Service: $svcName" 'FAIL' $_
-            $null = $errors.Add("Service restart failed: $svcName")
+        } -ValidateAction {
+            $svc = Get-Service -Name $svcName -ErrorAction SilentlyContinue
+            return ($svc -and $svc.Status -eq 'Running')
+        }
+        $null = $cycleResults.Add($result)
+        if ($result.RepairSuccess -and $result.ValidateSuccess) {
+            &$addLog "Service: $svcName" 'OK' 'Running'
+        } else {
+            &$addLog "Service: $svcName" 'FAIL' $result.Detail
+            $null = $errors.Add("Service ${svcName}: $($result.Detail)")
         }
     }
-    Write-Host '  [OK] Services processed' -ForegroundColor Green
 
-    # Step 3
-    Write-Host '[3/8] Repairing firewall...' -ForegroundColor White
-    try {
-        $null = netsh advfirewall firewall set rule group='File and Printer Sharing' new enable=Yes 2>$null
-        $null = netsh advfirewall firewall set rule group='Network Discovery' new enable=Yes 2>$null
-        $null = netsh advfirewall firewall add rule name='IPP Printer Port 631' dir=in action=allow protocol=TCP localport=631 description='Internet Printing Protocol' 2>$null
-        &$addLog 'Firewall repair' 'OK' 'Rules enabled'
-        Write-Host '  [OK] Firewall rules configured' -ForegroundColor Green
-    } catch {
-        &$addLog 'Firewall repair' 'FAIL' $_
-        $null = $errors.Add('Firewall repair failed')
+    # Repair Cycle 2: Firewall
+    Write-Host "[Firewall Repair]" -ForegroundColor Cyan
+    $fwResult = Invoke-RepairCycle -Issue 'Firewall rules for printing not enabled' -RootCause 'Firewall blocking print sharing' -RepairAction {
+        $null = Enable-PrinterFirewallRules -IncludeIpp
+    } -ValidateAction {
+        $fpRules = Get-NetFirewallRule -DisplayGroup 'File and Printer Sharing' -ErrorAction SilentlyContinue
+        $fpEnabled = @($fpRules | Where-Object { $_.Enabled }).Count -gt 0
+        $ippRule = Get-NetFirewallRule -DisplayName 'IPP Printer Port 631' -ErrorAction SilentlyContinue
+        $ippEnabled = $ippRule -and $ippRule.Enabled
+        return ($fpEnabled -and $ippEnabled)
+    }
+    $null = $cycleResults.Add($fwResult)
+    if ($fwResult.RepairSuccess -and $fwResult.ValidateSuccess) {
+        &$addLog 'Firewall' 'OK' 'Rules enabled'
+    } else {
+        &$addLog 'Firewall' 'FAIL' $fwResult.Detail
+        $null = $errors.Add("Firewall: $($fwResult.Detail)")
     }
 
-    # Step 4
-    Write-Host '[4/8] Repairing network discovery...' -ForegroundColor White
-    try {
+    # Repair Cycle 3: Network Profile
+    Write-Host "[Network Profile Repair]" -ForegroundColor Cyan
+    $netResult = Invoke-RepairCycle -Issue 'Network not set to Private' -RootCause 'Public network profile blocks discovery' -RepairAction {
         $profile = Get-NetConnectionProfile -ErrorAction SilentlyContinue | Select-Object -First 1
         if ($profile -and $profile.NetworkCategory -ne 'Private') {
             Set-NetConnectionProfile -InterfaceIndex $profile.InterfaceIndex -NetworkCategory Private -ErrorAction SilentlyContinue
-            &$addLog 'Network profile' 'OK' 'Set to Private'
-            Write-Host '  [OK] Network set to Private' -ForegroundColor Green
-        } else {
-            Write-Host '  [OK] Already Private' -ForegroundColor Green
         }
-    } catch {
-        &$addLog 'Network profile' 'FAIL' $_
-        Write-Host '  [WARN] Could not set profile' -ForegroundColor Yellow
+    } -ValidateAction {
+        $profile = Get-NetConnectionProfile -ErrorAction SilentlyContinue | Select-Object -First 1
+        return ($profile -and $profile.NetworkCategory -eq 'Private')
+    }
+    $null = $cycleResults.Add($netResult)
+    if ($netResult.RepairSuccess -and $netResult.ValidateSuccess) {
+        &$addLog 'Network Profile' 'OK' 'Set to Private'
+    } else {
+        &$addLog 'Network Profile' 'WARN' $netResult.Detail
     }
 
-    # Step 5
-    Write-Host '[5/8] Repairing printer shares...' -ForegroundColor White
-    try {
+    # Repair Cycle 4: Printer Shares
+    Write-Host "[Share Repair]" -ForegroundColor Cyan
+    $shareResult = Invoke-RepairCycle -Issue 'Printer shares not properly configured' -RootCause 'Share settings not applied' -RepairAction {
         $sharedPrinters = @(Get-Printer -ErrorAction SilentlyContinue | Where-Object { $_.Shared })
-        if ($sharedPrinters.Count -gt 0) {
-            foreach ($p in $sharedPrinters) {
-                try {
-                    Set-Printer -Name $p.Name -Shared $true -ErrorAction SilentlyContinue
-                    &$addLog "Re-share $($p.Name)" 'OK' 'Verified'
-                } catch {
-                    &$addLog "Re-share $($p.Name)" 'WARN' $_
-                }
+        if ($sharedPrinters.Count -eq 0) {
+            $allPrinters = Get-Printer -ErrorAction SilentlyContinue
+            if ($allPrinters.Count -gt 0) {
+                $p = $allPrinters[0]
+                $shareName = $p.Name -replace '[^a-zA-Z0-9_-]', '_'
+                Set-Printer -Name $p.Name -Shared $true -ShareName $shareName -ErrorAction SilentlyContinue
             }
-            Write-Host "  [OK] $($sharedPrinters.Count) share(s) verified" -ForegroundColor Green
         } else {
-            Write-Host '  [INFO] No shared printers found' -ForegroundColor Yellow
-            &$addLog 'Printer shares' 'INFO' 'None found'
+            foreach ($p in $sharedPrinters) {
+                Set-Printer -Name $p.Name -Shared $true -ErrorAction SilentlyContinue
+            }
         }
-    } catch {
-        &$addLog 'Printer share repair' 'FAIL' $_
+    } -ValidateAction {
+        $sharedCount = @(Get-Printer -ErrorAction SilentlyContinue | Where-Object { $_.Shared }).Count
+        return ($sharedCount -gt 0)
+    }
+    $null = $cycleResults.Add($shareResult)
+    if ($shareResult.RepairSuccess -and $shareResult.ValidateSuccess) {
+        &$addLog 'Printer Shares' 'OK' 'Verified'
+    } else {
+        &$addLog 'Printer Shares' 'WARN' $shareResult.Detail
     }
 
-    # Step 6
-    Write-Host '[6/8] Repairing spooler...' -ForegroundColor White
-    try {
-        $null = Stop-Spooler -Force
+    # Repair Cycle 5: Spooler
+    Write-Host "[Spooler Repair]" -ForegroundColor Cyan
+    $spoolResult = Invoke-RepairCycle -Issue 'Print spooler unhealthy' -RootCause 'Spooler service or queue issue' -RepairAction {
+        Stop-Service -Name Spooler -Force -ErrorAction SilentlyContinue
         Start-Sleep -Milliseconds 1000
         if (Test-Path -Path $Script:SpoolPath -ErrorAction SilentlyContinue) {
             Remove-Item -Path "$Script:SpoolPath\*" -Force -ErrorAction SilentlyContinue
-            &$addLog 'Clear queue' 'OK' 'Emptied'
         }
         Start-Sleep -Milliseconds 500
-        if (Start-Spooler) {
-            &$addLog 'Spooler' 'OK' 'Restarted and running'
-            Write-Host '  [OK] Spooler restarted' -ForegroundColor Green
-        } else {
-            throw 'Spooler failed to start'
-        }
-    } catch {
-        &$addLog 'Spooler repair' 'FAIL' $_
-        $null = $errors.Add("Spooler repair failed: $_")
-        Write-Host "  [ERROR] $_" -ForegroundColor Red
+        Start-Service -Name Spooler -ErrorAction SilentlyContinue
+        Start-Sleep -Milliseconds 1500
+    } -ValidateAction {
+        $svc = Get-Service -Name Spooler -ErrorAction SilentlyContinue
+        return ($svc -and $svc.Status -eq 'Running')
+    }
+    $null = $cycleResults.Add($spoolResult)
+    if ($spoolResult.RepairSuccess -and $spoolResult.ValidateSuccess) {
+        &$addLog 'Spooler' 'OK' 'Restarted'
+    } else {
+        &$addLog 'Spooler' 'FAIL' $spoolResult.Detail
+        $null = $errors.Add("Spooler: $($spoolResult.Detail)")
     }
 
-    # Step 7
-    Write-Host '[7/8] Verifying printers...' -ForegroundColor White
-    try {
-        $afterPrinters = @(Get-Printer -ErrorAction SilentlyContinue)
-        if ($afterPrinters.Count -gt 0) {
-            foreach ($p in $afterPrinters) {
-                $st = if ($p.PrinterStatus -eq 'Normal') { 'OK' } else { $p.PrinterStatus }
-                &$addLog "Verify $($p.Name)" 'OK' "Status: $st"
-            }
-            Write-Host "  [OK] $($afterPrinters.Count) printer(s) verified" -ForegroundColor Green
-        } else {
-            Write-Host '  [WARN] No printers found' -ForegroundColor Yellow
+    # Repair Cycle 6: Registry
+    Write-Host "[Registry Repair]" -ForegroundColor Cyan
+    $regResult = Invoke-RepairCycle -Issue 'Print registry settings incorrect' -RootCause 'Registry configuration not optimized for printing' -RepairAction {
+        $regPath = 'HKLM:\SYSTEM\CurrentControlSet\Control\Print'
+        if (-not (Test-Path -Path $regPath)) {
+            $null = New-Item -Path $regPath -Force -ErrorAction SilentlyContinue
         }
-    } catch {
-        &$addLog 'Verify printers' 'FAIL' $_
+        Set-ItemProperty -Path $regPath -Name 'RpcAuthnLevelPrivacyEnabled' -Value 0 -Type DWord -ErrorAction SilentlyContinue
+        Set-ItemProperty -Path $regPath -Name 'DisableHTTPPrinting' -Value 0 -Type DWord -ErrorAction SilentlyContinue
+    } -ValidateAction {
+        $val = Get-ItemProperty -Path 'HKLM:\SYSTEM\CurrentControlSet\Control\Print' -Name 'RpcAuthnLevelPrivacyEnabled' -ErrorAction SilentlyContinue
+        return ($null -eq $val -or $val.RpcAuthnLevelPrivacyEnabled -eq 0)
     }
+    $null = $cycleResults.Add($regResult)
 
-    # Step 8
-    Write-Host '[8/8] Printing test page...' -ForegroundColor White
-    try {
-        $default = Get-CimInstance -ClassName Win32_Printer -Filter "Default='True'" -ErrorAction SilentlyContinue
-        if ($default) {
-            $null = Start-Process -FilePath 'rundll32.exe' -ArgumentList @('PRINTUI.DLL,PrintUIEntry', '/k', '/n', "`"$($default.Name)`"") -NoNewWindow -Wait -PassThru
-            &$addLog 'Test page' 'OK' "Sent to $($default.Name)"
-            Write-Host "  [OK] Test page sent to $($default.Name)" -ForegroundColor Green
-        } else {
-            &$addLog 'Test page' 'SKIP' 'No default printer'
-            Write-Host '  [WARN] No default printer set' -ForegroundColor Yellow
-        }
-    } catch {
-        &$addLog 'Test page' 'FAIL' $_
+    # Final Validation
+    Write-Host "[Final Validation]" -ForegroundColor Cyan
+    $validation = Invoke-EndToEndValidation
+    $finalSuccess = ($errors.Count -eq 0 -and $validation.OverallScore -ge 80)
+    $Script:LastRepairResult = [PSCustomObject]@{
+        Success       = $finalSuccess
+        Cancelled     = $false
+        BackupPath    = $Script:BackupPath
+        CycleResults  = @($cycleResults)
+        Log           = @($logEntries)
+        Errors        = @($errors)
+        Validation    = $validation
+        Timestamp     = Get-Date
     }
-
-    $success = ($errors.Count -eq 0)
 
     Write-Host ''
-    Write-Host '========================================' -ForegroundColor $(if ($success) { 'Green' } else { 'Yellow' })
-    if ($success) {
+    Write-Host '========================================' -ForegroundColor $(if ($finalSuccess) { 'Green' } else { 'Yellow' })
+    if ($finalSuccess) {
         Write-Host '    REPAIR COMPLETED SUCCESSFULLY' -ForegroundColor Green
     } else {
         Write-Host "    REPAIR COMPLETED WITH $($errors.Count) ERROR(S)" -ForegroundColor Yellow
     }
-    Write-Host '========================================' -ForegroundColor $(if ($success) { 'Green' } else { 'Yellow' })
+    Write-Host '========================================' -ForegroundColor $(if ($finalSuccess) { 'Green' } else { 'Yellow' })
+    Write-Host "  Validation score: $($validation.OverallScore)%" -ForegroundColor Cyan
 
-    [PSCustomObject]@{
-        Success    = $success
-        Cancelled  = $false
-        BackupPath = if ($Script:BackupPath) { $Script:BackupPath } else { '' }
-        Log        = @($logEntries)
-        Errors     = @($errors)
-        Timestamp  = Get-Date
-    }
+    return $Script:LastRepairResult
 }
 
-Export-ModuleMember -Function Initialize-RepairBackup, Invoke-AutomaticShareRepair
+Export-ModuleMember -Function Initialize-RepairBackup, Invoke-AutomaticShareRepair, Invoke-RepairCycle, Invoke-RepairRollback

@@ -1,6 +1,6 @@
 <#
 .SYNOPSIS
-    CI build script for PrinterToolkit v5.0.1.
+    CI build script for PrinterToolkit.
 
 .DESCRIPTION
     Runs linting, Pester tests, module analysis, and packaging.
@@ -32,6 +32,16 @@ param(
 $ModuleRoot = Split-Path -Parent $PSScriptRoot
 $Timestamp = Get-Date -Format 'yyyyMMdd_HHmmss'
 
+$buildFailed = $false
+$toolkitVersion = '8.0.0'
+$manifestPath = Join-Path -Path $ModuleRoot -ChildPath 'PrinterToolkit.psd1'
+if (Test-Path -Path $manifestPath) {
+    $manifestData = Import-PowerShellDataFile -Path $manifestPath -ErrorAction SilentlyContinue
+    if ($manifestData -and $manifestData.ModuleVersion) {
+        $toolkitVersion = $manifestData.ModuleVersion.ToString()
+    }
+}
+
 function Write-Step {
     param([string]$Message, [string]$Status = 'INFO')
     $color = switch ($Status) {
@@ -42,7 +52,7 @@ function Write-Step {
 }
 
 Write-Host '========================================' -ForegroundColor Cyan
-Write-Host '  PrinterToolkit v5.0.1 Build Script' -ForegroundColor White
+Write-Host "  PrinterToolkit v$toolkitVersion Build Script" -ForegroundColor White
 Write-Host '  Configuration: ' -NoNewline; Write-Host $Configuration -ForegroundColor Yellow
 Write-Host '========================================' -ForegroundColor Cyan
 Write-Host ''
@@ -50,9 +60,11 @@ Write-Host ''
 # Step 1: Validate module structure
 Write-Step 'Validating module structure...'
 $expectedDirs = @(
-    'Modules\Core', 'Modules\IPP', 'Modules\Logging', 'Modules\Utilities',
-    'Modules\Android', 'Modules\Diagnostics', 'Modules\Repair',
-    'Modules\Drivers', 'Modules\Sharing', 'Modules\Reporting', 'Modules\Bundle'
+    'Modules\Core', 'Modules\Detection', 'Modules\Configuration', 'Modules\Drivers',
+    'Modules\Networking', 'Modules\IPP', 'Modules\SMB', 'Modules\Sharing',
+    'Modules\Android', 'Modules\Diagnostics', 'Modules\Repair', 'Modules\Rollback',
+    'Modules\Validation', 'Modules\SetupWizard', 'Modules\Reporting', 'Modules\Logging',
+    'Modules\Utilities', 'Modules\Bundle'
 )
 $missingDirs = @()
 foreach ($dir in $expectedDirs) {
@@ -61,6 +73,7 @@ foreach ($dir in $expectedDirs) {
 }
 if ($missingDirs.Count -gt 0) {
     Write-Step "Missing directories: $($missingDirs -join ', ')" 'FAIL'
+    $buildFailed = $true
 } else {
     Write-Step 'All module directories present' 'OK'
 }
@@ -74,6 +87,7 @@ foreach ($f in $expectedFiles) {
 }
 if ($missingFiles.Count -gt 0) {
     Write-Step "Missing files: $($missingFiles -join ', ')" 'FAIL'
+    $buildFailed = $true
 } else {
     Write-Step 'Core module files present' 'OK'
 }
@@ -91,7 +105,6 @@ foreach ($script in $allScripts) {
         $syntaxErrors += $script.Name
     }
 }
-$buildFailed = $false
 if ($syntaxErrors.Count -gt 0) {
     Write-Step "Syntax errors in: $($syntaxErrors -join ', ')" 'FAIL'
     $buildFailed = $true
@@ -153,7 +166,7 @@ try {
 
 # Step 6: Package
 if (-not $OutputDir) {
-    $OutputDir = Join-Path -Path $ModuleRoot -ChildPath "artifacts\PrinterToolkit_v5.0.1_$Timestamp"
+    $OutputDir = Join-Path -Path $ModuleRoot -ChildPath "artifacts\PrinterToolkit_v$toolkitVersion_$Timestamp"
 }
 $null = New-Item -ItemType Directory -Force -Path $OutputDir
 
@@ -173,7 +186,7 @@ try {
 
     # Generate manifest
     $buildManifest = @{
-        Version       = '5.0.1'
+        Version       = $toolkitVersion
         BuildDate     = (Get-Date -Format 'yyyy-MM-dd HH:mm:ss')
         Configuration = $Configuration
         TotalScripts  = $allScripts.Count

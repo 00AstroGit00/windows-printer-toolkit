@@ -163,17 +163,11 @@ function Set-DefaultPrinter {
 
     Assert-Elevated
 
-    try {
-        $null = Start-Process -FilePath 'rundll32.exe' -ArgumentList 'PRINTUI.DLL,PrintUIEntry', '/y', '/n', "`"$Name`"" -NoNewWindow -Wait -PassThru
-        $result = ($LASTEXITCODE -eq 0)
-        if (-not $result) {
-            Write-Log -Message "Failed to set default printer: $Name (exit: $LASTEXITCODE)" -Level 'WARN'
-        }
-        return $result
-    } catch {
-        Write-Log -Message "Exception setting default printer: $_" -Level 'ERROR'
-        return $false
+    $native = Set-DefaultPrinterNative -Name $Name
+    if (-not $native.Success) {
+        Write-Log -Message "Failed to set default printer: $Name - $($native.Message)" -Level 'WARN'
     }
+    return $native.Success
 }
 
 function Get-PrinterQueueHealth {
@@ -244,4 +238,40 @@ function Enable-PrintSharing {
     }
 }
 
-Export-ModuleMember -Function Get-PrinterStatus, Stop-Spooler, Start-Spooler, Clear-PrintQueue, Restart-Spooler, Get-Printers, Set-DefaultPrinter, Get-PrinterQueueHealth, Get-SharedPrinters, Enable-PrintSharing
+function Get-PrinterWmiDetail {
+    [CmdletBinding()]
+    [OutputType([PSCustomObject])]
+    param(
+        [Parameter(Mandatory = $false)]
+        [string]$PrinterName
+    )
+
+    try {
+        $filter = if ($PrinterName) { "Name = '$($PrinterName -replace "'", "''")'" } else { '' }
+        $printer = Get-CimInstance -ClassName Win32_Printer -Filter $filter -ErrorAction SilentlyContinue |
+            Select-Object -First 1
+
+        if (-not $printer) { return $null }
+
+        [PSCustomObject]@{
+            Name            = $printer.Name
+            PrinterStatus   = $printer.PrinterStatus
+            Status          = $printer.Status
+            IsDefault       = $printer.Default
+            IsShared        = $printer.Shared
+            ShareName       = $printer.ShareName
+            PortName        = $printer.PortName
+            DriverName      = $printer.DriverName
+            Location        = $printer.Location
+            Comment         = $printer.Comment
+            PNPDeviceID     = $printer.PNPDeviceID
+            PrintProcessor  = $printer.PrintProcessor
+            Published       = $printer.Published
+            RawStatus       = $printer.StatusInfo
+        }
+    } catch {
+        return $null
+    }
+}
+
+Export-ModuleMember -Function Get-PrinterStatus, Stop-Spooler, Start-Spooler, Clear-PrintQueue, Restart-Spooler, Get-Printers, Set-DefaultPrinter, Get-PrinterQueueHealth, Get-SharedPrinters, Enable-PrintSharing, Get-PrinterWmiDetail
