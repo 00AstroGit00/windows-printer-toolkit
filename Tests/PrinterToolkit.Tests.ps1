@@ -19,7 +19,7 @@ BeforeAll {
 }
 
 AfterAll {
-    if (Test-Path $Script:TestRoot) {
+    if ($Script:TestRoot -and (Test-Path $Script:TestRoot)) {
         Remove-Item -Path $Script:TestRoot -Recurse -Force -ErrorAction SilentlyContinue
     }
 }
