@@ -1,0 +1,100 @@
+name: CI
+on:
+  push:
+    branches: [main, develop]
+    paths-ignore:
+      - '**/*.md'
+      - '**/*.zip'
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  analyze:
+    name: Analyze & Test
+    runs-on: windows-latest
+    strategy:
+      matrix:
+        psversion: ['5.1', '7.4']
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup PowerShell ${{ matrix.psversion }}
+        if: matrix.psversion == '7.4'
+        shell: pwsh
+        run: |
+          $url = 'https://github.com/PowerShell/PowerShell/releases/download/v7.4.6/PowerShell-7.4.6-win-x64.msi'
+          $tmp = "$env:TEMP\pwsh.msi"
+          Invoke-WebRequest -Uri $url -OutFile $tmp
+          Start-Process msiexec.exe -ArgumentList "/i `"$tmp`" /quiet /norestart" -Wait
+
+      - name: Install Pester
+        shell: pwsh
+        run: Install-Module Pester -Force -Scope CurrentUser -SkipPublisherCheck
+
+      - name: Syntax Check
+        shell: pwsh
+        run: |
+          $errors = @()
+          Get-ChildItem -Recurse -Filter '*.psm1','*.ps1' | ForEach-Object {
+            try {
+              $null = [System.Management.Automation.Language.Parser]::ParseFile($_.FullName, [ref]$null, [ref]$null)
+            } catch {
+              $errors += $_.Name
+            }
+          }
+          if ($errors.Count -gt 0) {
+            Write-Host "Syntax errors in: $($errors -join ', ')"
+            exit 1
+          }
+          Write-Host "All scripts pass syntax check"
+
+      - name: Run Tests
+        shell: pwsh
+        run: |
+          $results = Invoke-Pester -Path ./Tests/PrinterToolkit.Tests.ps1 -PassThru
+          if ($results.FailedCount -gt 0) {
+            exit 1
+          }
+
+  build:
+    name: Build Package
+    needs: analyze
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Build
+        shell: pwsh
+        run: ./CI/build.ps1 -Configuration Release
+
+      - name: Package
+        shell: pwsh
+        run: |
+          $artifacts = Get-ChildItem ./artifacts | Sort-Object LastWriteTime -Descending | Select-Object -First 1
+          ./CI/package.ps1 -ArtifactPath $artifacts.FullName
+
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: PrinterToolkit
+          path: ./releases/*.zip
+
+  release:
+    name: Create Release
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: build
+    runs-on: windows-latest
+    steps:
+      - name: Download Artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: PrinterToolkit
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: PrinterToolkit*.zip
+          generate_release_notes: true

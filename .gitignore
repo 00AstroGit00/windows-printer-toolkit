@@ -1,0 +1,29 @@
+# Build artifacts
+artifacts/
+releases/
+
+# Logs
+*.log
+
+# Diagnostic bundles
+PrinterToolkit_Diagnostics_*
+PrinterToolkit_RepairBackup_*
+
+# Reports
+PrinterToolkit_Report_*
+PrinterToolkit_Registry_*
+PrinterToolkit_Firewall_*
+PrinterToolkit_Services_*
+PrinterToolkit_Drivers_*
+PrinterToolkit_Android_*
+
+# OS
+Thumbs.db
+.DS_Store
+desktop.ini
+
+# IDE
+.vs/
+.vscode/
+*.user
+*.suo
