@@ -99,5 +99,4 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           files: PrinterToolkit*.zip
-          allowUpdates: true
           generate_release_notes: true
