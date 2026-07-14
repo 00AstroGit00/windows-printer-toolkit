@@ -32,13 +32,12 @@ $FailedModules = @()
 foreach ($modPath in $ModulePaths) {
     if (Test-Path -Path $modPath -PathType Leaf) {
         try {
-            . $modPath
+            $null = Import-Module -Name $modPath -Force -ErrorAction Stop -Verbose:$false
             $LoadedModules += (Get-Item -Path $modPath).BaseName
             Write-Verbose "Loaded module: $modPath"
         } catch {
             $FailedModules += @{ Path = $modPath; Error = $_.Exception.Message }
             Write-Warning "Failed to load module: $modPath - $($_.Exception.Message)"
-            continue
         }
     } else {
         Write-Verbose "Module not found: $modPath"

@@ -12,6 +12,20 @@
 
     RequiredModules      = @()
 
+    NestedModules        = @(
+        'Modules/Core/PrinterToolkit.Core.psm1',
+        'Modules/IPP/PrinterToolkit.IPP.psm1',
+        'Modules/Logging/PrinterToolkit.Logging.psm1',
+        'Modules/Utilities/PrinterToolkit.Utilities.psm1',
+        'Modules/Android/PrinterToolkit.Android.psm1',
+        'Modules/Diagnostics/PrinterToolkit.Diagnostics.psm1',
+        'Modules/Repair/PrinterToolkit.Repair.psm1',
+        'Modules/Drivers/PrinterToolkit.Drivers.psm1',
+        'Modules/Sharing/PrinterToolkit.Sharing.psm1',
+        'Modules/Reporting/PrinterToolkit.Reporting.psm1',
+        'Modules/Bundle/PrinterToolkit.Bundle.psm1'
+    )
+
     FunctionsToExport    = @(
         # Root
         'Get-ToolkitStatus', 'Invoke-ToolkitMainMenu',
