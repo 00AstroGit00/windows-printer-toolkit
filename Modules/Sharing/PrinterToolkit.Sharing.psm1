@@ -16,7 +16,11 @@ function Get-PrinterShareStatus {
     [CmdletBinding()]
     [OutputType([array])]
     param()
-    $printers = @(Get-Printer -ErrorAction SilentlyContinue)
+    try {
+        $printers = @(Get-Printer -ErrorAction SilentlyContinue)
+    } catch {
+        $printers = @()
+    }
     $results = foreach ($p in $printers) {
         $driver = Get-PrinterDriver -Name $p.DriverName -ErrorAction SilentlyContinue
         $isIPP = if ($p.PortName -match '^(http|ipp|wsd|wsdprint)') { $true } else { $false }

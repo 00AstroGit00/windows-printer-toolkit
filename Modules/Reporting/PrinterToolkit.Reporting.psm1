@@ -216,7 +216,11 @@ function Get-PrintComplianceReport {
     [CmdletBinding()]
     [OutputType([array])]
     param()
-    $printers = @(Get-Printer -ErrorAction SilentlyContinue)
+    try {
+        $printers = @(Get-Printer -ErrorAction SilentlyContinue)
+    } catch {
+        $printers = @()
+    }
     $drivers = @(Get-PrinterDriver -ErrorAction SilentlyContinue)
 
     $results = foreach ($p in $printers) {

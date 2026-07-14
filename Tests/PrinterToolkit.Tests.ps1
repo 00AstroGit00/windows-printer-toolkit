@@ -97,7 +97,8 @@ Describe 'Core Module' {
 
 Describe 'Utilities Module' {
     It 'Test-Administrator should return boolean' {
-        Test-Administrator -is [bool] | Should -Be $true
+        $result = Test-Administrator
+        $result -is [bool] | Should -Be $true
     }
 
     It 'Test-Elevated calls Test-Administrator' {
@@ -110,12 +111,12 @@ Describe 'Utilities Module' {
     }
 
     It 'Assert-Elevated should not throw when admin' {
-        Mock Test-Administrator { return $true }
+        Mock Test-Administrator { return $true } -ModuleName 'PrinterToolkit.Utilities'
         { Assert-Elevated } | Should -Not -Throw
     }
 
     It 'Assert-Elevated should throw when not admin' {
-        Mock Test-Administrator { return $false }
+        Mock Test-Administrator { return $false } -ModuleName 'PrinterToolkit.Utilities'
         { Assert-Elevated } | Should -Throw
     }
 }
