@@ -1,0 +1,54 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/microsoft/winget-cli/master/schemas/JSON/manifests/v1.6.0/manifest.locale.1.6.0.json
+# PrinterToolkit v5.3.0 — Windows Package Manager Locale Manifest
+PackageIdentifier: PrinterToolkit.PrinterToolkit
+PackageVersion: 5.3.0
+PackageLocale: en-US
+Publisher: PrinterToolkit Contributors
+PublisherUrl: https://github.com/00AstroGit00/windows-printer-toolkit
+PublisherSupportUrl: https://github.com/00AstroGit00/windows-printer-toolkit/issues
+PrivacyUrl: https://github.com/00AstroGit00/windows-printer-toolkit/blob/main/SECURITY.md
+PackageName: PrinterToolkit
+PackageUrl: https://github.com/00AstroGit00/windows-printer-toolkit
+License: MIT
+LicenseUrl: https://github.com/00AstroGit00/windows-printer-toolkit/blob/main/LICENSE
+Copyright: Copyright (c) 2024-2026 PrinterToolkit Contributors
+ShortDescription: Enterprise Windows printer troubleshooting, diagnostic, and management toolkit.
+Description: |-
+  PrinterToolkit is a complete Windows printer management solution for IT administrators,
+  helpdesk technicians, and power users. It consolidates printer inventory, IPP discovery,
+  driver intelligence (Type 3/4), Android Mopria compatibility, automatic share repair,
+  diagnostic bundles, and professional reporting into a single interactive PowerShell dashboard.
+
+  Key capabilities:
+  - Printer Inventory & Status — enumerate all printers with detailed status
+  - IPP Discovery — Internet Printing Protocol support detection and validation
+  - Driver Intelligence — Type 3 vs Type 4 detection, export, restore, INF install
+  - Share Management — enable/disable sharing, set permissions, switch transports (SMB/IPP/WSD)
+  - Android Printing — Mopria Print Service compatibility wizard
+  - Automatic Repair — 8-step repair workflow with full backup and rollback
+  - Diagnostics — 17-check network validation, firewall/registry/service snapshots
+  - Reporting — professional HTML reports, JSON/CSV exports, compliance checks
+  - Diagnostic Bundle — collect everything into a single ZIP archive
+Tags:
+  - printer
+  - printing
+  - diagnostics
+  - windows
+  - troubleshooting
+  - ipp
+  - mopria
+  - android
+  - powershell
+  - spooler
+  - driver
+  - network
+  - repair
+  - report
+  - bundle
+Documentations:
+  - DocumentLabel: README
+    DocumentUrl: https://github.com/00AstroGit00/windows-printer-toolkit/blob/main/README.md
+  - DocumentLabel: Wiki
+    DocumentUrl: https://github.com/00AstroGit00/windows-printer-toolkit/wiki
+ManifestType: defaultLocale
+ManifestVersion: 1.6.0

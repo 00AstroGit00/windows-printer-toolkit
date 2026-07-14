@@ -1,6 +1,6 @@
 <#
 .SYNOPSIS
-    PrinterToolkit v5.0 — Bootstrap installer & launcher.
+    PrinterToolkit v5.0.1 — Bootstrap installer & launcher.
 
 .DESCRIPTION
     Downloads the latest PrinterToolkit release from GitHub, extracts it,
@@ -35,7 +35,7 @@ $ErrorActionPreference = 'Stop'
 $owner = '00AstroGit00'
 $repo = 'windows-printer-toolkit'
 
-Write-Host 'PrinterToolkit v5.0 — Bootstrap Installer' -ForegroundColor Cyan
+Write-Host 'PrinterToolkit v5.0.1 — Bootstrap Installer' -ForegroundColor Cyan
 Write-Host '=========================================' -ForegroundColor Cyan
 Write-Host ''
 
@@ -57,10 +57,25 @@ try {
     Write-Host "    Release: $($releaseData.tag_name)" -ForegroundColor Gray
     Write-Host "    Asset:   $($asset.name)" -ForegroundColor Gray
     Invoke-WebRequest -Uri $downloadUrl -OutFile $zipPath -ErrorAction Stop
+
+    $checksumAsset = $releaseData.assets | Where-Object { $_.name -match 'SHA256SUMS$' } | Select-Object -First 1
+    if ($checksumAsset) {
+        $checksumsTxt = Invoke-RestMethod -Uri $checksumAsset.browser_download_url -ErrorAction SilentlyContinue
+        $zipName = $asset.name
+        $expectedHash = ($checksumsTxt -split "`n" | Where-Object { $_ -match $zipName } | ForEach-Object { ($_ -split '\s+')[0] }).Trim()
+        if ($expectedHash) {
+            $actualHash = (Get-FileHash -Path $zipPath -Algorithm SHA256).Hash
+            if ($actualHash -ne $expectedHash) {
+                throw "SHA-256 mismatch for $zipName"
+            }
+            Write-Host "    SHA-256: $($actualHash.Substring(0, 16))... verified" -ForegroundColor Gray
+        }
+    }
 } catch {
-    Write-Host "    Release not found, downloading from main branch..." -ForegroundColor Yellow
-    $fallbackUrl = "https://github.com/$owner/$repo/raw/main/PrinterToolkit_v5.0.0.zip"
+    Write-Host "    Release download failed, falling back to main branch archive..." -ForegroundColor Yellow
+    $fallbackUrl = "https://github.com/$owner/$repo/archive/refs/heads/main.zip"
     Invoke-WebRequest -Uri $fallbackUrl -OutFile $zipPath -ErrorAction Stop
+    Write-Host '    [WARN] Integrity cannot be verified on fallback path' -ForegroundColor Yellow
 }
 Write-Host '  [OK] Downloaded' -ForegroundColor Green
 

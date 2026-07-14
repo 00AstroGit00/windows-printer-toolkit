@@ -7,7 +7,7 @@
 [![PowerShell](https://img.shields.io/badge/PowerShell-5.1%2B-blue?logo=powershell&logoColor=white)](https://github.com/PowerShell/PowerShell)
 [![Platform](https://img.shields.io/badge/Platform-Windows%2010%2F11%20%7C%20Server%202022%2B-brightgreen?logo=windows&logoColor=white)](https://www.microsoft.com/windows)
 [![License](https://img.shields.io/badge/License-MIT-green)](LICENSE)
-[![Version](https://img.shields.io/badge/Version-5.0-brightgreen)](#)
+[![Version](https://img.shields.io/badge/Version-5.0.1-brightgreen)](#)
 [![PRs Welcome](https://img.shields.io/badge/PRs-Welcome-orange)](#)
 [![CI](https://img.shields.io/badge/CI-GitHub%20Actions-blue?logo=githubactions&logoColor=white)](.github/workflows/ci.yml)
 
@@ -54,7 +54,7 @@ Get-ToolkitStatus
 
 ```powershell
 # Download from releases
-iwr -Uri https://github.com/00AstroGit00/windows-printer-toolkit/releases/latest/download/PrinterToolkit_v5.0.0.zip -OutFile "$env:TEMP\ptk.zip"
+iwr -Uri https://github.com/00AstroGit00/windows-printer-toolkit/releases/latest/download/PrinterToolkit_v5.0.1.zip -OutFile "$env:TEMP\ptk.zip"
 Expand-Archive "$env:TEMP\ptk.zip" -DestinationPath "$env:TEMP\ptk"
 Import-Module "$env:TEMP\ptk\PrinterToolkit\PrinterToolkit.psd1" -Force
 Invoke-ToolkitMainMenu
@@ -86,7 +86,7 @@ PrinterToolkit is a **complete Windows printer management solution** for IT admi
 
 ```
 ╔══════════════════════════════════════════╗
-║       PrinterToolkit v5.0               ║
+║       PrinterToolkit v5.0.1             ║
 ║   Enterprise Printer Management          ║
 ╚══════════════════════════════════════════╝
 
@@ -123,18 +123,18 @@ PrinterToolkit/
 ├── launcher.ps1                 # Standalone entry point
 ├── install.ps1                  # Bootstrap downloader & runner
 ├── Modules/                     # 11 specialized submodules
-│   ├── Core/         (189L)     # Spooler, queue, printer enumeration
-│   ├── IPP/          (215L)     # Internet Printing Protocol
-│   ├── Logging/      (174L)     # Structured logging framework
-│   ├── Utilities/    (142L)     # Admin check, system info, UI helpers
-│   ├── Android/      (173L)     # Mopria compatibility wizard
-│   ├── Diagnostics/  (307L)     # Network validation + snapshots
-│   ├── Repair/       (244L)     # 8-step automatic share repair
-│   ├── Drivers/      (200L)     # Type 3/4 detection, INF management
-│   ├── Sharing/      (228L)     # SMB/IPP/WSD transport, permissions
-│   ├── Reporting/    (251L)     # HTML/JSON/CSV reports
-│   └── Bundle/       (194L)     # Diagnostic ZIP archive
-├── Tests/                       # Pester unit tests (46 tests)
+│   ├── Core/                    # Spooler, queue, printer enumeration
+│   ├── IPP/                     # Internet Printing Protocol
+│   ├── Logging/                 # Structured logging framework
+│   ├── Utilities/               # Admin check, system info, UI helpers
+│   ├── Android/                 # Mopria compatibility wizard
+│   ├── Diagnostics/             # Network validation + snapshots
+│   ├── Repair/                  # 8-step automatic share repair
+│   ├── Drivers/                 # Type 3/4 detection, INF management
+│   ├── Sharing/                 # SMB/IPP/WSD transport, permissions
+│   ├── Reporting/               # HTML/JSON/CSV reports
+│   └── Bundle/                  # Diagnostic ZIP archive
+├── Tests/                       # Pester unit tests (49 tests)
 ├── CI/                          # Build & release scripts
 └── .github/workflows/           # GitHub Actions CI/CD
 ```
@@ -156,7 +156,7 @@ PrinterToolkit/
 Invoke-Pester -Path .\Tests\PrinterToolkit.Tests.ps1
 ```
 
-46 tests covering all 11 modules, export validation, error handling, and return type contracts.
+49 tests covering all 11 modules, export validation, error handling, and return type contracts.
 
 ---
 
@@ -164,20 +164,20 @@ Invoke-Pester -Path .\Tests\PrinterToolkit.Tests.ps1
 
 ```powershell
 .\CI\build.ps1 -Configuration Release
-.\CI\package.ps1 -ArtifactPath .\artifacts\PrinterToolkit_v5.0_<timestamp>
+.\CI\package.ps1 -ArtifactPath .\artifacts\PrinterToolkit_v5.0.1_<timestamp>
 ```
 
 ---
 
 ## Certification
 
-PrinterToolkit v5.0 has undergone production certification:
+PrinterToolkit v5.0.1 has undergone production certification:
 
 - **Security review:** 12 findings identified and remediated (3 critical, 4 high)
 - **Repository audit:** All 55 exports, 20 menu options, 11 module paths verified
 - **Production readiness score:** 93/100
 
-See [CERTIFICATION.md](CERTIFICATION.md) for the full report.
+See [CERTIFICATION.md](CERTIFICATION.md) for the v5.0.1 audit report.
 
 ---
 

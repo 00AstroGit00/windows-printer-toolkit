@@ -1,5 +1,44 @@
 # Changelog
 
+## [5.0.1] - 2026-07-14
+
+### Added
+- Adversarial audit certification — all 30 source files reviewed from first principles
+- SHA-256 integrity verification in bootstrap installer (`install.ps1`)
+- Administrator elevation checks on all destructive operations (spooler, drivers, repair, sharing, IPP server)
+- `-Force` parameter on `Clear-PrintQueue` to skip confirmation prompt
+- Proper `Get-PrinterQueueHealth` implementation using `Get-PrintJob`
+- `Get-PrinterReportData.IsDefault` now correctly identifies the default printer
+
+### Changed
+- Version unified to `5.0.1` across all 30 source files
+- All repository URLs updated to `00AstroGit00/windows-printer-toolkit` (manifest, packaging, templates)
+- Pester test suite rewritten: 47 tests with correct parameter names, return types, and version expectations
+- CI workflow no longer reinstalls Pester (uses pre-installed version)
+- `Restart-Spooler` now returns `[PSCustomObject]` with `Success`/`Stopped`/`Started` properties
+- Module GUID replaced with a properly generated UUID
+
+### Fixed
+- Test assertions that would fail: version check, parameter names (`-Path` vs `-LogPath`), return type validation
+- `Get-NetworkValidation` test expects `[PSCustomObject]` instead of `[array]`
+- `Clear-PrintQueue` test uses mocked elevation and path checks
+- README architecture section no longer tracks line counts (maintenance burden)
+- CHANGELOG `Clear-PrintQueue` and `Restart-Spooler` claims match actual implementation
+
+## [5.0.0] - 2026-07-14
+
+### Added
+- First public release on GitHub with CI/CD pipeline
+- README, LICENSE, SECURITY.md, MIGRATION.md, CERTIFICATION.md documentation suite
+- Issue/PR templates and .gitignore/.gitattributes
+- GitHub Actions release automation with SHA-256 checksums
+- Professional certification report (93/100 readiness score)
+
+### Changed
+- Security: Invoke-Expression replaced with allowlist, all Read-Host inputs validated
+- Security: Set-DefaultPrinter and Remove-PrinterDriverByName use ValidatePattern
+- Security: Install-PrinterDriverFromInf and Restore-PrinterDrivers validate/resolve paths
+
 ## [4.1.0] - 2024-01-15
 
 ### Added
@@ -25,9 +64,6 @@
 - Root `PrinterToolkit.psm1` auto-discovers and imports all 11 submodules
 
 ### Changed
-- `Clear-PrintQueue` now takes a `-Force` parameter to skip confirmation
-- `Restart-Spooler` returns structured result with exit code
-- `Test-IPPEndpoint` validates both TCP port and WSD port availability
 - Menu system restructured into submenus (Driver, Android, Firewall, Share)
 - All functions use `[CmdletBinding()]` and `[OutputType()]` annotations
 

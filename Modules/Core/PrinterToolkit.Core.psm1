@@ -43,6 +43,8 @@ function Stop-Spooler {
         [switch]$Force
     )
 
+    Assert-Elevated
+
     try {
         $svc = Get-Service -Name Spooler -ErrorAction Stop
         if ($svc.Status -eq 'Stopped') {
@@ -68,6 +70,9 @@ function Stop-Spooler {
 function Start-Spooler {
     [CmdletBinding()]
     [OutputType([bool])]
+
+    Assert-Elevated
+
     try {
         $svc = Get-Service -Name Spooler -ErrorAction Stop
         if ($svc.Status -eq 'Running') {
@@ -94,9 +99,19 @@ function Start-Spooler {
 function Clear-PrintQueue {
     [CmdletBinding()]
     [OutputType([int])]
+    param(
+        [Parameter(Mandatory = $false)]
+        [switch]$Force
+    )
+
+    Assert-Elevated
 
     if (-not (Test-Path -Path $Script:SpoolPath -ErrorAction SilentlyContinue)) {
         return 0
+    }
+
+    if (-not $Force -and -not (Confirm-DestructiveAction -Message 'Clear all pending print jobs?' -Prompt 'Clear print queue')) {
+        return -1
     }
 
     $before = @(Get-ChildItem -Path $Script:SpoolPath -File -ErrorAction SilentlyContinue).Count
@@ -108,10 +123,20 @@ function Clear-PrintQueue {
 
 function Restart-Spooler {
     [CmdletBinding()]
-    [OutputType([bool])]
-    $null = Stop-Spooler -Force
+    [OutputType([PSCustomObject])]
+
+    Assert-Elevated
+
+    $stopped = Stop-Spooler -Force
     Start-Sleep -Milliseconds 1000
-    return (Start-Spooler)
+    $started = Start-Spooler
+
+    [PSCustomObject]@{
+        Success      = ($stopped -and $started)
+        Stopped      = $stopped
+        Started      = $started
+        Timestamp    = Get-Date
+    }
 }
 
 function Get-Printers {
@@ -129,6 +154,8 @@ function Set-DefaultPrinter {
         [ValidatePattern('^[a-zA-Z0-9 _\-.()]+$')]
         [string]$Name
     )
+
+    Assert-Elevated
 
     try {
         $null = Start-Process -FilePath 'rundll32.exe' -ArgumentList 'PRINTUI.DLL,PrintUIEntry', '/y', '/n', "`"$Name`"" -NoNewWindow -Wait -PassThru
@@ -151,11 +178,31 @@ function Get-PrinterQueueHealth {
         [string]$PrinterName = '*'
     )
 
+    $jobs = @()
+    $jobCount = 0
+    $hasErrors = $false
+    $errorMsg = ''
+
+    try {
+        if ($PrinterName -and $PrinterName -ne '*') {
+            $jobs = @(Get-PrintJob -Name $PrinterName -ErrorAction SilentlyContinue)
+        } else {
+            $printers = Get-Printer -ErrorAction SilentlyContinue
+            foreach ($p in $printers) {
+                $jobs += @(Get-PrintJob -Name $p.Name -ErrorAction SilentlyContinue)
+            }
+        }
+        $jobCount = $jobs.Count
+        $hasErrors = ($jobs | Where-Object { $_.JobStatus -match 'Error|Offline' }).Count -gt 0
+    } catch {
+        $errorMsg = $_.Exception.Message
+    }
+
     [PSCustomObject]@{
         PrinterName  = $PrinterName
-        JobCount     = 0
-        HasErrors    = $false
-        ErrorMessage = ''
+        JobCount     = $jobCount
+        HasErrors    = $hasErrors
+        ErrorMessage = $errorMsg
     }
 }
 
@@ -168,6 +215,9 @@ function Get-SharedPrinters {
 function Enable-PrintSharing {
     [CmdletBinding()]
     [OutputType([bool])]
+
+    Assert-Elevated
+
     try {
         $svc = Get-Service -Name LanmanServer -ErrorAction Stop
         if ($svc.Status -ne 'Running') {

@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="utf-8"?>
+<package xmlns="http://schemas.microsoft.com/packaging/2015/06/nuspec.xsd">
+  <metadata>
+    <id>PrinterToolkit</id>
+    <version>5.3.0</version>
+    <title>PrinterToolkit</title>
+    <authors>PrinterToolkit Contributors</authors>
+    <owners>PrinterToolkit Contributors</owners>
+    <licenseUrl>https://github.com/00AstroGit00/windows-printer-toolkit/blob/main/LICENSE</licenseUrl>
+    <projectUrl>https://github.com/00AstroGit00/windows-printer-toolkit</projectUrl>
+    <iconUrl>https://raw.githubusercontent.com/00AstroGit00/windows-printer-toolkit/main/.github/images/icon.png</iconUrl>
+    <requireLicenseAcceptance>false</requireLicenseAcceptance>
+    <description>
+PrinterToolkit is a complete PowerShell-based Windows printer management solution for IT administrators, helpdesk technicians, and power users.
+
+Features:
+- Printer Inventory & Status — enumerate all printers with detailed status
+- IPP Discovery — Internet Printing Protocol support detection and validation
+- Driver Intelligence — Type 3 vs Type 4 detection, export, restore, INF install
+- Share Management — enable/disable sharing, set permissions, switch transports
+- Android Printing — Mopria Print Service compatibility wizard and connection strings
+- Automatic Repair — 8-step repair workflow with full backup and rollback
+- Diagnostics — 17-check network validation, firewall/registry/service snapshots
+- Reporting — professional HTML reports, JSON/CSV exports, compliance checks
+- Diagnostic Bundle — ZIP archive with 12 diagnostic sections
+    </description>
+    <summary>Enterprise Windows printer troubleshooting and management toolkit for PowerShell.</summary>
+    <tags>printer printing diagnostics windows troubleshooting ipp mopria android powershell spooler driver network repair report</tags>
+    <packageSourceUrl>https://github.com/00AstroGit00/windows-printer-toolkit</packageSourceUrl>
+    <docsUrl>https://github.com/00AstroGit00/windows-printer-toolkit/blob/main/README.md</docsUrl>
+    <bugTrackerUrl>https://github.com/00AstroGit00/windows-printer-toolkit/issues</bugTrackerUrl>
+    <releaseNotes>https://github.com/00AstroGit00/windows-printer-toolkit/blob/main/CHANGELOG.md</releaseNotes>
+  </metadata>
+  <files>
+    <file src="tools\**" target="tools" />
+  </files>
+</package>

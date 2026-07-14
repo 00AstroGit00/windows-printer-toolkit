@@ -1,0 +1,7 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/microsoft/winget-cli/master/schemas/JSON/manifests/v1.6.0/manifest.version.1.6.0.json
+# PrinterToolkit v5.3.0 — Windows Package Manager Version Manifest
+PackageIdentifier: PrinterToolkit.PrinterToolkit
+PackageVersion: 5.3.0
+DefaultLocale: en-US
+ManifestType: version
+ManifestVersion: 1.6.0

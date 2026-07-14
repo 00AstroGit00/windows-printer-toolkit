@@ -1,6 +1,6 @@
 <#
 .SYNOPSIS
-    Release packaging script for PrinterToolkit v5.0.
+    Release packaging script for PrinterToolkit v5.0.1.
 
 .DESCRIPTION
     Creates a clean release ZIP archive from the built artifacts,
@@ -10,13 +10,13 @@
     Path to the build output (from build.ps1).
 
 .PARAMETER Version
-    Version string for the release. Default: 4.1.0.
+    Version string for the release. Default: 5.0.1.
 
 .PARAMETER OutputDir
     Where to place the final release ZIP.
 
 .EXAMPLE
-    .\CI\package.ps1 -ArtifactPath .\artifacts\PrinterToolkit_v4.1_20240101 -Version 4.1.0
+    .\CI\package.ps1 -ArtifactPath .\artifacts\PrinterToolkit_v5.0.1_20260714 -Version 5.0.1
 #>
 
 [CmdletBinding()]
@@ -24,7 +24,7 @@ param(
     [Parameter(Mandatory = $true)]
     [ValidateScript({ Test-Path $_ })]
     [string]$ArtifactPath,
-    [string]$Version = '5.0.0',
+    [string]$Version = '5.0.1',
     [string]$OutputDir
 )
 
@@ -94,7 +94,7 @@ Import the module or run launcher.ps1.
 - Administrator rights for management operations
 
 ## Support
-Report issues at https://github.com/PrinterToolkit/PrinterToolkit
+Report issues at https://github.com/00AstroGit00/windows-printer-toolkit
 "@
 $releaseNotes | Out-File -FilePath $releaseNotesPath -Encoding UTF8
 

@@ -1,10 +1,10 @@
-# Migration Guide: v4.0 → v5.0
+# Migration Guide: v4.0 → v5.0.1
 
 ## Overview
 
-v5.0 is a certification and hardening release. All public function signatures remain backward-compatible with v4.1.
+v5.0.1 is the certification release following an independent adversarial audit. All public function signatures remain backward-compatible with v4.1.
 
-If you are upgrading from **v4.0**, note the following function renames that occurred during the v4.1 production hardening (which v5.0 inherits):
+If you are upgrading from **v4.0**, note the following function renames that occurred during the v4.1 production hardening (which v5.0.1 inherits):
 
 ## Renamed Functions (v4.0 → v4.1/v5.0)
 
@@ -27,7 +27,18 @@ If you are upgrading from **v4.0**, note the following function renames that occ
 
 ## Breaking Changes
 
-None. v5.0 adds files (README, LICENSE, templates, CERTIFICATION) and fixes security issues in existing code paths. All 55 exported functions retain their v4.1 signatures.
+**v5.0.1 only:** `Clear-PrintQueue` now requires `-Force` to skip the confirmation prompt. `Restart-Spooler` now returns `[PSCustomObject]` instead of `[bool]`. If you piped `Restart-Spooler` to a boolean check, update to check `$result.Success`.
+
+Otherwise: v5.0.1 adds files and fixes security/issues in existing code paths. All 55 exported functions retain their v4.1 signatures except as noted above.
+
+## v5.0.1 Changes
+
+- `Clear-PrintQueue`: Added `-Force` parameter and confirmation prompt; added elevation check
+- `Restart-Spooler`: Now returns `[PSCustomObject]` with `Success`, `Stopped`, `Started`, `Timestamp`
+- `Get-PrinterQueueHealth`: Now queries actual print jobs via `Get-PrintJob` instead of returning hardcoded values
+- `Get-PrinterReportData.IsDefault`: Now correctly identifies the default printer
+- 9 destructive operations now call `Assert-Elevated` before executing
+- Bootstrap installer (`install.ps1`) now verifies SHA-256 checksums
 
 ## Security Fixes
 
@@ -54,7 +65,7 @@ None. v5.0 adds files (README, LICENSE, templates, CERTIFICATION) and fixes secu
 
 ## Upgrade Steps
 
-1. Replace the entire `PrinterToolkit/` directory with v5.0
+1. Replace the entire `PrinterToolkit/` directory with v5.0.1
 2. Run `.\launcher.ps1` to verify the menu loads
-3. Run `Invoke-Pester .\Tests\PrinterToolkit.Tests.ps1` to verify all 46 tests pass
+3. Run `Invoke-Pester .\Tests\PrinterToolkit.Tests.ps1` to verify all 49 tests pass
 4. Review `CERTIFICATION.md` for full audit details

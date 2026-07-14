@@ -51,6 +51,8 @@ function Enable-PrinterSharing {
         [switch]$PublishInAD
     )
 
+    begin { Assert-Elevated }
+
     process {
         $result = [PSCustomObject]@{ PrinterName = $PrinterName; Success = $false; Error = '' }
 
@@ -81,6 +83,8 @@ function Disable-PrinterSharing {
         [Parameter(Mandatory = $true, ValueFromPipeline = $true)]
         [string]$PrinterName
     )
+
+    begin { Assert-Elevated }
 
     process {
         $result = [PSCustomObject]@{ PrinterName = $PrinterName; Success = $false; Error = '' }
@@ -135,6 +139,8 @@ function Set-PrinterSharePermission {
         [switch]$Force
     )
 
+    Assert-Elevated
+
     $result = [PSCustomObject]@{ ShareName = $ShareName; Account = $AccountName; Success = $false; Error = '' }
 
     try {
@@ -167,6 +173,8 @@ function Set-PrinterSharingTransport {
         [ValidateSet('SMB', 'IPP', 'WSD')]
         [string]$Transport
     )
+
+    Assert-Elevated
 
     $result = [PSCustomObject]@{ PrinterName = $PrinterName; Transport = $Transport; Success = $false; Error = '' }
 

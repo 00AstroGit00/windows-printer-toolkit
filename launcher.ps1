@@ -1,6 +1,6 @@
 <#
 .SYNOPSIS
-    PrinterToolkit v5.0 - Standalone launcher script for direct execution.
+    PrinterToolkit v5.0.1 - Standalone launcher script for direct execution.
 
 .DESCRIPTION
     Entry point that imports the PrinterToolkit module and launches the
@@ -45,8 +45,8 @@ try {
 }
 
 if (-not $Quiet) {
-    $host.UI.RawUI.WindowTitle = "PrinterToolkit v5.0 - Enterprise Printer Management"
-    Write-Host 'PrinterToolkit v5.0' -ForegroundColor Cyan
+    $host.UI.RawUI.WindowTitle = "PrinterToolkit v5.0.1 - Enterprise Printer Management"
+    Write-Host 'PrinterToolkit v5.0.1' -ForegroundColor Cyan
     Write-Host 'Enterprise Printer Management Toolkit' -ForegroundColor Gray
     $status = Get-ToolkitStatus
     Write-Host "Loaded $($status.LoadedModules.Count) module(s)" -ForegroundColor Gray

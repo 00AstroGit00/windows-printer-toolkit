@@ -1,0 +1,46 @@
+{
+    "version": "5.3.0",
+    "description": "Enterprise Windows printer troubleshooting, diagnostic, and management toolkit for PowerShell.",
+    "homepage": "https://github.com/00AstroGit00/windows-printer-toolkit",
+    "license": "MIT",
+    "notes": [
+        "Run 'Import-Module PrinterToolkit' to load the module.",
+        "Run 'launcher.ps1' to open the interactive dashboard.",
+        "Some operations require Administrator privileges."
+    ],
+    "architecture": {
+        "64bit": {
+            "url": "https://github.com/00AstroGit00/windows-printer-toolkit/releases/download/v5.3.0/PrinterToolkit_v5.3.0.zip",
+            "hash": "PLACEHOLDER_64_CHAR_HEX_SHA256"
+        },
+        "32bit": {
+            "url": "https://github.com/00AstroGit00/windows-printer-toolkit/releases/download/v5.3.0/PrinterToolkit_v5.3.0.zip",
+            "hash": "PLACEHOLDER_64_CHAR_HEX_SHA256"
+        }
+    },
+    "extract_dir": "PrinterToolkit",
+    "bin": [
+        [
+            "launcher.ps1",
+            "ptk"
+        ]
+    ],
+    "checkver": {
+        "github": "https://github.com/00AstroGit00/windows-printer-toolkit",
+        "regex": "v([\\d.]+)"
+    },
+    "autoupdate": {
+        "architecture": {
+            "64bit": {
+                "url": "https://github.com/00AstroGit00/windows-printer-toolkit/releases/download/v$version/PrinterToolkit_v$version.zip"
+            },
+            "32bit": {
+                "url": "https://github.com/00AstroGit00/windows-printer-toolkit/releases/download/v$version/PrinterToolkit_v$version.zip"
+            }
+        },
+        "hash": {
+            "url": "$url.sha256",
+            "regex": "$sha256"
+        }
+    }
+}

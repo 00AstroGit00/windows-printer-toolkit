@@ -162,6 +162,8 @@ function Install-IPPServer {
         [switch]$Force
     )
 
+    Assert-Elevated
+
     $result = [PSCustomObject]@{ Success = $false; Installed = @(); Errors = @() }
 
     try {

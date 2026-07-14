@@ -55,6 +55,8 @@ function Export-PrinterDrivers {
         [string]$OutputPath
     )
 
+    Assert-Elevated
+
     if (-not $OutputPath) {
         $OutputPath = Join-Path -Path ([Environment]::GetFolderPath('Desktop')) -ChildPath "PrinterToolkit_Drivers_$(Get-Date -Format 'yyyyMMdd_HHmmss')"
     }
@@ -143,6 +145,8 @@ function Install-PrinterDriverFromInf {
         [string]$InfPath
     )
 
+    Assert-Elevated
+
     $result = [PSCustomObject]@{
         Success  = $false
         ExitCode = -1
@@ -174,6 +178,8 @@ function Remove-PrinterDriverByName {
         [ValidatePattern('^[a-zA-Z0-9 _\-.()]+$')]
         [string]$DriverName
     )
+
+    Assert-Elevated
 
     $result = [PSCustomObject]@{
         Success  = $false

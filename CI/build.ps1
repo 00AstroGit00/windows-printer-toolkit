@@ -1,6 +1,6 @@
 <#
 .SYNOPSIS
-    CI build script for PrinterToolkit v5.0.
+    CI build script for PrinterToolkit v5.0.1.
 
 .DESCRIPTION
     Runs linting, Pester tests, module analysis, and packaging.
@@ -42,7 +42,7 @@ function Write-Step {
 }
 
 Write-Host '========================================' -ForegroundColor Cyan
-Write-Host '  PrinterToolkit v5.0 Build Script' -ForegroundColor White
+Write-Host '  PrinterToolkit v5.0.1 Build Script' -ForegroundColor White
 Write-Host '  Configuration: ' -NoNewline; Write-Host $Configuration -ForegroundColor Yellow
 Write-Host '========================================' -ForegroundColor Cyan
 Write-Host ''
@@ -153,7 +153,7 @@ try {
 
 # Step 6: Package
 if (-not $OutputDir) {
-    $OutputDir = Join-Path -Path $ModuleRoot -ChildPath "artifacts\PrinterToolkit_v5.0_$Timestamp"
+    $OutputDir = Join-Path -Path $ModuleRoot -ChildPath "artifacts\PrinterToolkit_v5.0.1_$Timestamp"
 }
 $null = New-Item -ItemType Directory -Force -Path $OutputDir
 
@@ -173,7 +173,7 @@ try {
 
     # Generate manifest
     $buildManifest = @{
-        Version       = '5.0.0'
+        Version       = '5.0.1'
         BuildDate     = (Get-Date -Format 'yyyy-MM-dd HH:mm:ss')
         Configuration = $Configuration
         TotalScripts  = $allScripts.Count

@@ -1,0 +1,29 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/microsoft/winget-cli/master/schemas/JSON/manifests/v1.6.0/manifest.installer.1.6.0.json
+# PrinterToolkit v5.3.0 — Windows Package Manager Installer Manifest
+PackageIdentifier: PrinterToolkit.PrinterToolkit
+PackageVersion: 5.3.0
+Installers:
+  - Architecture: x64
+    InstallerType: zip
+    InstallerUrl: https://github.com/00AstroGit00/windows-printer-toolkit/releases/download/v5.3.0/PrinterToolkit_v5.3.0.zip
+    InstallerSha256: PLACEHOLDER_64_CHAR_HEX_SHA256
+    NestedInstallerType: portable
+    NestedInstallerFiles:
+      - RelativeFilePath: PrinterToolkit/launcher.ps1
+        PortableCommandAlias: ptk
+    Commands:
+      - ptk
+    ReleaseDate: 2026-07-14
+  - Architecture: x86
+    InstallerType: zip
+    InstallerUrl: https://github.com/00AstroGit00/windows-printer-toolkit/releases/download/v5.3.0/PrinterToolkit_v5.3.0.zip
+    InstallerSha256: PLACEHOLDER_64_CHAR_HEX_SHA256
+    NestedInstallerType: portable
+    NestedInstallerFiles:
+      - RelativeFilePath: PrinterToolkit/launcher.ps1
+        PortableCommandAlias: ptk
+    Commands:
+      - ptk
+    ReleaseDate: 2026-07-14
+ManifestType: installer
+ManifestVersion: 1.6.0

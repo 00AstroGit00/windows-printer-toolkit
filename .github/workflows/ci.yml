@@ -29,10 +29,6 @@ jobs:
           Invoke-WebRequest -Uri $url -OutFile $tmp
           Start-Process msiexec.exe -ArgumentList "/i `"$tmp`" /quiet /norestart" -Wait
 
-      - name: Install Pester
-        shell: pwsh
-        run: Install-Module Pester -Force -Scope CurrentUser -SkipPublisherCheck
-
       - name: Syntax Check
         shell: pwsh
         run: |

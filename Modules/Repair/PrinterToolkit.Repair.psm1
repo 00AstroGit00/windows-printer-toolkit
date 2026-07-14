@@ -62,6 +62,8 @@ function Invoke-AutomaticShareRepair {
         [switch]$TestMode
     )
 
+    Assert-Elevated
+
     $logEntries = [System.Collections.ArrayList]::new()
     $errors = [System.Collections.ArrayList]::new()
 

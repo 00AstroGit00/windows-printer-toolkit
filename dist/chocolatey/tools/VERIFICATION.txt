@@ -1,0 +1,22 @@
+PrinterToolkit v5.3.0 — Chocolatey Package Verification
+
+Package Checksum Verification:
+  1. Download the release ZIP from GitHub:
+     https://github.com/00AstroGit00/windows-printer-toolkit/releases/download/v5.3.0/PrinterToolkit_v5.3.0.zip
+
+  2. Compute SHA-256:
+     Get-FileHash .\PrinterToolkit_v5.3.0.zip -Algorithm SHA256
+
+  3. Compare against the published checksum in the GitHub release.
+
+  4. Extract and verify module structure:
+     Expand-Archive .\PrinterToolkit_v5.3.0.zip -DestinationPath .\verify
+     Test-Path .\verify\PrinterToolkit\PrinterToolkit.psd1   # must exist
+     Test-Path .\verify\PrinterToolkit\Modules                # must exist (11 subdirectories)
+
+  5. Load the module:
+     Import-Module .\verify\PrinterToolkit\PrinterToolkit.psd1 -Force
+     Get-ToolkitStatus
+
+  6. Run the test suite:
+     Invoke-Pester .\verify\PrinterToolkit\Tests\PrinterToolkit.Tests.ps1

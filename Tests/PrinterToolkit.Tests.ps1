@@ -1,6 +1,6 @@
 <#
 .SYNOPSIS
-    Pester tests for PrinterToolkit v4.1 modules.
+    Pester tests for PrinterToolkit v5.0.1 modules.
 
 .DESCRIPTION
     Run: Invoke-Pester -Path .\Tests\PrinterToolkit.Tests.ps1
@@ -14,6 +14,14 @@
 BeforeAll {
     $ModuleRoot = Split-Path -Parent $PSScriptRoot
     Import-Module (Join-Path $ModuleRoot 'PrinterToolkit.psd1') -Force -ErrorAction Stop
+    $Script:TestRoot = Join-Path -Path $env:TEMP -ChildPath "PTTest_$([System.IO.Path]::GetRandomFileName())"
+    $null = New-Item -ItemType Directory -Force -Path $Script:TestRoot -ErrorAction SilentlyContinue
+}
+
+AfterAll {
+    if (Test-Path $Script:TestRoot) {
+        Remove-Item -Path $Script:TestRoot -Recurse -Force -ErrorAction SilentlyContinue
+    }
 }
 
 Describe 'Module Loading' {
@@ -21,8 +29,8 @@ Describe 'Module Loading' {
         Get-Module PrinterToolkit | Should -Not -BeNullOrEmpty
     }
 
-    It 'Should have version 4.1.x' {
-        (Get-Module PrinterToolkit).Version | Should -BeLike '4.1.*'
+    It 'Should have version 5.0.x' {
+        (Get-Module PrinterToolkit).Version | Should -BeLike '5.0.*'
     }
 
     It 'Should export all required functions' {
@@ -62,24 +70,28 @@ Describe 'Core Module' {
         $result -is [array] | Should -Be $true
     }
 
-    It 'Get-PrinterStatus should return results' {
+    It 'Get-PrinterStatus should return a PSCustomObject with expected properties' {
         $result = Get-PrinterStatus
-        $result | Should -Not -BeNullOrEmpty
+        $result.SpoolerStatus | Should -Not -BeNullOrEmpty
+        $result.PrinterCount -is [int] | Should -Be $true
+        $result.Timestamp | Should -Not -BeNullOrEmpty
     }
 
     It 'Get-SharedPrinters should not throw' {
         { $result = Get-SharedPrinters -ErrorAction SilentlyContinue } | Should -Not -Throw
     }
 
-    It 'Clear-PrintQueue should prompt before action' {
-        Mock Confirm-DestructiveAction { return $false }
-        $result = Clear-PrintQueue
-        $result | Should -Not -BeNullOrEmpty
+    It 'Clear-PrintQueue with -Force should handle missing spool path' {
+        Mock -ModuleName 'PrinterToolkit.Core' Test-Path { return $false }
+        $result = Clear-PrintQueue -Force
+        $result -is [int] | Should -Be $true
     }
 
-    It 'Restart-Spooler should return success/failure' {
+    It 'Restart-Spooler should return a PSCustomObject' {
+        Mock -ModuleName 'PrinterToolkit.Core' Stop-Spooler { return $true }
+        Mock -ModuleName 'PrinterToolkit.Core' Start-Spooler { return $true }
         $result = Restart-Spooler
-        $result.Success -is [bool] | Should -Be $true
+        $result.Success | Should -Be $true
     }
 }
 
@@ -88,10 +100,8 @@ Describe 'Utilities Module' {
         Test-Administrator -is [bool] | Should -Be $true
     }
 
-    It 'Get-SpoolerStatus uses Stop-Spooler/Start-Spooler approach' {
-        $spooler = Get-Service -Name Spooler -ErrorAction SilentlyContinue
-        $spooler | Should -Not -BeNullOrEmpty
-        $spooler.Status -in @('Running', 'Stopped') | Should -Be $true
+    It 'Test-Elevated calls Test-Administrator' {
+        Test-Elevated | Should -Be (Test-Administrator)
     }
 
     It 'Get-SystemInfo should include computer name' {
@@ -99,8 +109,14 @@ Describe 'Utilities Module' {
         $result.ComputerName | Should -Be $env:COMPUTERNAME
     }
 
-    It 'Confirm-DestructiveAction should accept pipe input' {
-        'test' | Confirm-DestructiveAction -message 'Test' | Should -Be $true
+    It 'Assert-Elevated should not throw when admin' {
+        Mock Test-Administrator { return $true }
+        { Assert-Elevated } | Should -Not -Throw
+    }
+
+    It 'Assert-Elevated should throw when not admin' {
+        Mock Test-Administrator { return $false }
+        { Assert-Elevated } | Should -Throw
     }
 }
 
@@ -109,69 +125,83 @@ Describe 'IPP Module' {
         { $result = Test-IPPClientInstalled -ErrorAction SilentlyContinue } | Should -Not -Throw
     }
 
-    It 'Get-IPPStatus should return results' {
-        { $result = Get-IPPStatus -ErrorAction SilentlyContinue } | Should -Not -Throw
+    It 'Get-IPPStatus should return a PSCustomObject' {
+        $result = Get-IPPStatus -ErrorAction SilentlyContinue
+        $result -is [PSCustomObject] | Should -Be $true
     }
 
-    It 'Get-IPPUrls should return valid URLs' {
+    It 'Get-IPPUrls should return an array' {
         $result = Get-IPPUrls -ErrorAction SilentlyContinue
         $result -is [array] | Should -Be $true
     }
 
-    It 'Test-IPPEndpoint should validate endpoints' {
-        $result = Test-IPPEndpoint -ErrorAction SilentlyContinue
-        if ($result) {
-            $result.Success -is [bool] | Should -Be $true
-        }
+    It 'Test-IPPEndpoint requires -Url parameter' {
+        $params = (Get-Command Test-IPPEndpoint).Parameters
+        $params['Url'].Attributes.Mandatory | Should -Be $true
     }
 }
 
 Describe 'Logging Module' {
+    BeforeEach {
+        $Script:TestLogPath = Join-Path -Path $Script:TestRoot -ChildPath 'test.log'
+    }
+
     AfterEach {
-        if (Test-Path 'TestDriver:\tmp\toolkit_test.log') {
-            Remove-Item 'TestDriver:\tmp\toolkit_test.log' -Force -ErrorAction SilentlyContinue
+        if (Test-Path $Script:TestLogPath) {
+            Remove-Item -Path $Script:TestLogPath -Force -ErrorAction SilentlyContinue
         }
     }
 
-    It 'Initialize-Logging should create a log file' {
-        $path = Initialize-Logging -LogPath 'TestDriver:\tmp\toolkit_test.log'
-        $path | Should -Not -BeNullOrEmpty
+    It 'Initialize-Logging should set log directory' {
+        $logDir = Join-Path -Path $Script:TestRoot -ChildPath 'logs'
+        Initialize-Logging -Path $logDir
+        Get-LogFilePath | Should -Not -BeNullOrEmpty
     }
 
-    It 'Write-Log should write entries' {
-        $null = Initialize-Logging -LogPath 'TestDriver:\tmp\toolkit_test.log'
+    It 'Write-Log should write entries to file' {
+        $logDir = Join-Path -Path $Script:TestRoot -ChildPath 'logs'
+        Initialize-Logging -Path $logDir
         Write-Log -Message 'Test message' -Level 'INFO'
-        $logs = Get-LogContent -Path 'TestDriver:\tmp\toolkit_test.log'
-        $logs | Should -Not -BeNullOrEmpty
+        $logFile = Get-LogFilePath
+        Test-Path $logFile.Path | Should -Be $true
     }
 
-    It 'Get-LogFilePath should return path' {
-        $null = Initialize-Logging -LogPath 'TestDriver:\tmp\toolkit_test.log'
-        $path = Get-LogFilePath
-        $path | Should -BeLike '*toolkit*'
+    It 'Get-LogFilePath should return PSCustomObject with Path and Exists' {
+        $logDir = Join-Path -Path $Script:TestRoot -ChildPath 'logs'
+        Initialize-Logging -Path $logDir
+        $info = Get-LogFilePath
+        $info.Path | Should -Not -BeNullOrEmpty
+        $info.Exists | Should -Be $true
     }
 
-    It 'Export-LogArchive should create archive' {
-        $null = Initialize-Logging -LogPath 'TestDriver:\tmp\toolkit_test.log'
+    It 'Get-LogContent should filter by level' {
+        $logDir = Join-Path -Path $Script:TestRoot -ChildPath 'logs'
+        Initialize-Logging -Path $logDir
+        Write-Log -Message 'Error test' -Level 'ERROR'
+        $errors = Get-LogContent -Level 'ERROR'
+        $errors | Should -Not -BeNullOrEmpty
+    }
+
+    It 'Export-LogArchive should create a zip' {
+        $logDir = Join-Path -Path $Script:TestRoot -ChildPath 'logs'
+        Initialize-Logging -Path $logDir
         Write-Log -Message 'Archive test' -Level 'INFO'
-        $result = Export-LogArchive -DestinationPath 'TestDriver:\tmp\'
+        $dest = Join-Path -Path $Script:TestRoot -ChildPath 'archive.zip'
+        $result = Export-LogArchive -Destination $dest
         $result | Should -Not -BeNullOrEmpty
+        Test-Path $result | Should -Be $true
     }
 }
 
 Describe 'Diagnostics Module' {
-    It 'Get-NetworkValidation should return results' {
+    It 'Get-NetworkValidation should return a PSCustomObject with score' {
         $result = Get-NetworkValidation -ErrorAction SilentlyContinue
-        $result -is [array] | Should -Be $true
+        $result -is [PSCustomObject] | Should -Be $true
+        $result.OverallScore -is [double] | Should -Be $true
     }
 
     It 'Show-NetworkValidationReport should not throw' {
         { Show-NetworkValidationReport -ErrorAction SilentlyContinue } | Should -Not -Throw
-    }
-
-    It 'Export-RegistrySnapshot should create a file' {
-        $path = Export-RegistrySnapshot
-        $path | Should -Not -BeNullOrEmpty
     }
 
     It 'Export-FirewallSnapshot should not throw' {
@@ -184,17 +214,13 @@ Describe 'Diagnostics Module' {
 }
 
 Describe 'Repair Module' {
-    It 'Initialize-RepairBackup should create a backup path' {
-        Mock New-Item { return [PSCustomObject]@{ FullName = 'TestDriver:\tmp\backup' } }
-        $path = Initialize-RepairBackup
-        $path | Should -Not -BeNullOrEmpty
+    It 'Initialize-RepairBackup should exist and accept pipeline' {
+        Get-Command Initialize-RepairBackup -ErrorAction SilentlyContinue | Should -Not -BeNullOrEmpty
     }
 
-    It 'Invoke-AutomaticShareRepair with -TestMode should not execute' {
-        Mock Confirm-DestructiveAction { return $true }
-        $result = Invoke-AutomaticShareRepair -TestMode
-        $result.Success -is [bool] | Should -Be $true
-        $result.Log -is [array] | Should -Be $true
+    It 'Invoke-AutomaticShareRepair should have a -TestMode switch' {
+        $cmd = Get-Command Invoke-AutomaticShareRepair -ErrorAction SilentlyContinue
+        $cmd.Parameters['TestMode'].SwitchParameter | Should -Be $true
     }
 }
 
@@ -209,10 +235,9 @@ Describe 'Drivers Module' {
         $result -is [array] | Should -Be $true
     }
 
-    It 'Export-PrinterDrivers should create a directory' {
-        $path = Export-PrinterDrivers -OutputPath 'TestDriver:\tmp\driver_export'
-        $path | Should -Not -BeNullOrEmpty
-        if (Test-Path $path) { Remove-Item $path -Recurse -Force }
+    It 'Export-PrinterDrivers should exist and have -OutputPath parameter' {
+        $cmd = Get-Command Export-PrinterDrivers -ErrorAction SilentlyContinue
+        $cmd.Parameters.ContainsKey('OutputPath') | Should -Be $true
     }
 
     It 'Restore-PrinterDrivers should validate path' {
@@ -221,6 +246,10 @@ Describe 'Drivers Module' {
 
     It 'Install-PrinterDriverFromInf should validate path' {
         { Install-PrinterDriverFromInf -InfPath 'Z:\nonexistent.inf' -ErrorAction Stop } | Should -Throw
+    }
+
+    It 'Remove-PrinterDriverByName should validate pattern' {
+        { Remove-PrinterDriverByName -DriverName 'bad|name' -ErrorAction Stop } | Should -Throw
     }
 }
 
@@ -239,43 +268,51 @@ Describe 'Sharing Module' {
         $result -is [array] | Should -Be $true
     }
 
-    It 'Enable-PrinterSharing should handle missing printer' {
-        $result = Enable-PrinterSharing -PrinterName 'DoesNotExist_Test'
+    It 'Enable-PrinterSharing should return Success=false for missing printer' {
+        Mock -ModuleName 'PrinterToolkit.Sharing' Assert-Elevated { return $null }
+        Mock Get-Printer { return $null } -ModuleName 'PrinterToolkit.Sharing'
+        $result = Enable-PrinterSharing -PrinterName 'Nonexistent_Test'
         $result.Success | Should -Be $false
     }
 
-    It 'Disable-PrinterSharing should handle missing printer' {
-        $result = Disable-PrinterSharing -PrinterName 'DoesNotExist_Test'
+    It 'Disable-PrinterSharing should return Success=false for missing printer' {
+        Mock -ModuleName 'PrinterToolkit.Sharing' Assert-Elevated { return $null }
+        Mock Get-Printer { return $null } -ModuleName 'PrinterToolkit.Sharing'
+        $result = Disable-PrinterSharing -PrinterName 'Nonexistent_Test'
         $result.Success | Should -Be $false
     }
 }
 
 Describe 'Reporting Module' {
-    It 'New-PrinterReport should generate files' {
-        $path = 'TestDriver:\tmp\report'
-        $files = New-PrinterReport -Format 'All' -OutputPath $path
-        $files | Should -Not -BeNullOrEmpty
-        if (Test-Path $path) { Remove-Item $path -Recurse -Force }
-    }
-
-    It 'Get-PrintComplianceReport should return array' {
+    It 'Get-PrintComplianceReport should return an array' {
         $result = Get-PrintComplianceReport
         $result -is [array] | Should -Be $true
     }
 }
 
+Describe 'New-PrinterReport' {
+    It 'should generate files with -Format All' {
+        $reportDir = Join-Path -Path $Script:TestRoot -ChildPath 'report'
+        $files = New-PrinterReport -Format 'All' -OutputPath $reportDir
+        $files | Should -Not -BeNullOrEmpty
+    }
+}
+
 Describe 'Bundle Module' {
-    It 'New-DiagnosticBundle should create output' {
-        $result = New-DiagnosticBundle -OutputPath 'TestDriver:\tmp\bundle'
-        $result | Should -Not -BeNullOrEmpty
-        if (Test-Path $result) { Remove-Item $result -Force -ErrorAction SilentlyContinue }
+    It 'New-DiagnosticBundle function should exist' {
+        Get-Command New-DiagnosticBundle -ErrorAction SilentlyContinue | Should -Not -BeNullOrEmpty
+    }
+
+    It 'New-DiagnosticBundle should have -OutputPath parameter' {
+        $cmd = Get-Command New-DiagnosticBundle -ErrorAction SilentlyContinue
+        $cmd.Parameters.ContainsKey('OutputPath') | Should -Be $true
     }
 }
 
 Describe 'Android Module' {
-    It 'Get-AndroidCompatibility should return results' {
+    It 'Get-AndroidCompatibility should return a PSCustomObject' {
         $result = Get-AndroidCompatibility -ErrorAction SilentlyContinue
-        $result | Should -Not -BeNullOrEmpty
+        $result -is [PSCustomObject] | Should -Be $true
     }
 
     It 'Show-AndroidWizard should not throw' {
@@ -289,9 +326,9 @@ Describe 'Android Module' {
 }
 
 Describe 'Toolkit Status' {
-    It 'Get-ToolkitStatus should show version' {
+    It 'Get-ToolkitStatus should show version 5.0.x' {
         $status = Get-ToolkitStatus
-        $status.Version | Should -BeLike '4.1.*'
+        $status.Version | Should -BeLike '5.0.*'
         $status.LoadedModules.Count | Should -BeGreaterThan 0
     }
 

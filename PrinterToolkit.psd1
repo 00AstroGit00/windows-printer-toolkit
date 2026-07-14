@@ -1,8 +1,8 @@
 @{
     RootModule           = 'PrinterToolkit.psm1'
-    ModuleVersion        = '5.0.0'
+    ModuleVersion        = '5.0.1'
     CompatiblePSVersions = @('5.1', '7.0', '7.1', '7.2', '7.3', '7.4')
-    GUID                 = 'a1b2c3d4-e5f6-7890-abcd-ef1234567890'
+    GUID                 = 'e8c4a1d7-2b9f-4e3c-9a0d-6f8b1c5d7e3a'
     Author               = 'PrinterToolkit Contributors'
     CompanyName          = 'PrinterToolkit'
     Copyright            = '(c) 2024-2026 PrinterToolkit Contributors. MIT License.'
@@ -57,10 +57,19 @@
     PrivateData = @{
         PSData = @{
             Tags         = @('Printer', 'Print', 'Printing', 'Diagnostics', 'Windows', 'Troubleshooting', 'IPP', 'Mopria', 'Android')
-            LicenseUri   = 'https://github.com/PrinterToolkit/PrinterToolkit/blob/main/LICENSE'
-            ProjectUri   = 'https://github.com/PrinterToolkit/PrinterToolkit'
-            IconUri      = ''
+            LicenseUri   = 'https://github.com/00AstroGit00/windows-printer-toolkit/blob/main/LICENSE'
+            ProjectUri   = 'https://github.com/00AstroGit00/windows-printer-toolkit'
+            IconUri      = 'https://raw.githubusercontent.com/00AstroGit00/windows-printer-toolkit/main/.github/images/icon.png'
             ReleaseNotes = @'
+## 5.0.1 - Adversarial Audit Remediation
+- Independent adversarial audit: 21 findings identified, 17 remediated, 4 documented
+- SHA-256 integrity verification in bootstrap installer
+- Elevation gates on 9 destructive operations (spooler, repair, drivers, sharing, IPP)
+- Pester test suite repaired: 47 deterministic tests with no false positives
+- Version unified to 5.0.1 across all 30 source files
+- Repository URLs corrected to 00AstroGit00/windows-printer-toolkit
+- Documentation synchronized: README, CHANGELOG, CERTIFICATION, MIGRATION, SECURITY
+
 ## 5.0.0 - Enterprise Validation, Certification & Community Release
 - Repository verification — full audit of all 55 exports, paths, references, and tests
 - Security review — 12 findings remediated (3 critical, 4 high, 2 medium, 2 low)

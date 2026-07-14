@@ -4,9 +4,9 @@
 
 | Version | Supported |
 |---------|-----------|
-| 4.1.x   | Yes       |
-| 4.0.x   | No        |
-| < 4.0   | No        |
+| 5.0.x   | Yes       |
+| 4.1.x   | No        |
+| < 4.1   | No        |
 
 ## Reporting a Vulnerability
 
@@ -26,6 +26,8 @@ If you discover a security vulnerability:
 - Log files are written to user-controlled locations (Desktop)
 - Module loading does not bypass execution policy
 - No external dependencies or network calls during operation
+- Destructive operations require `Assert-Elevated` check before execution
+- Bootstrap installer verifies SHA-256 checksums against published release assets
 
 ## Scope
 
