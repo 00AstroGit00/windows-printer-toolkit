@@ -93,9 +93,11 @@ jobs:
         with:
           name: PrinterToolkit
           path: .
+          merge-multiple: true
 
       - name: Create Release
         uses: softprops/action-gh-release@v2
         with:
-          files: PrinterToolkit/PrinterToolkit*.zip
+          files: PrinterToolkit*.zip
+          allowUpdates: true
           generate_release_notes: true

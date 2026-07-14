@@ -31,6 +31,16 @@ param(
 $ModuleRoot = Split-Path -Parent $PSScriptRoot
 $Timestamp = Get-Date -Format 'yyyyMMdd_HHmmss'
 
+if (-not $PSBoundParameters.ContainsKey('Version')) {
+    $manifestPath = Join-Path -Path $ModuleRoot -ChildPath 'PrinterToolkit.psd1'
+    if (Test-Path -Path $manifestPath) {
+        $manifest = Import-PowerShellDataFile -Path $manifestPath -ErrorAction SilentlyContinue
+        if ($manifest -and $manifest.ModuleVersion) {
+            $Version = $manifest.ModuleVersion.ToString()
+        }
+    }
+}
+
 if (-not $OutputDir) {
     $OutputDir = Join-Path -Path $ModuleRoot -ChildPath 'releases'
 }
