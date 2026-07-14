@@ -33,7 +33,7 @@ jobs:
         shell: pwsh
         run: |
           $errors = @()
-          Get-ChildItem -Recurse -Filter '*.psm1','*.ps1' | ForEach-Object {
+          Get-ChildItem -Path . -Recurse -Include '*.psm1','*.ps1' | ForEach-Object {
             try {
               $null = [System.Management.Automation.Language.Parser]::ParseFile($_.FullName, [ref]$null, [ref]$null)
             } catch {
