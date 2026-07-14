@@ -16,7 +16,11 @@ function Get-PrinterShareStatus {
     [CmdletBinding()]
     [OutputType([array])]
     param()
-    $printers = @(Get-Printer -ErrorAction SilentlyContinue)
+    try {
+        $printers = @(Get-Printer -ErrorAction SilentlyContinue)
+    } catch {
+        $printers = @()
+    }
     $results = foreach ($p in $printers) {
         $driver = Get-PrinterDriver -Name $p.DriverName -ErrorAction SilentlyContinue
         $isIPP = if ($p.PortName -match '^(http|ipp|wsd|wsdprint)') { $true } else { $false }
@@ -36,7 +40,7 @@ function Get-PrinterShareStatus {
         }
     }
 
-    return ,$results
+    return ,@($results)
 }
 
 function Enable-PrinterSharing {
@@ -121,7 +125,7 @@ function Get-SmbSharePermissions {
         }
     }
 
-    return ,$results
+    return ,@($results)
 }
 
 function Set-PrinterSharePermission {
@@ -230,7 +234,7 @@ function Get-PrinterSharingCompatibility {
         }
     }
 
-    return ,$results
+    return ,@($results)
 }
 
 Export-ModuleMember -Function Get-PrinterShareStatus, Enable-PrinterSharing, Disable-PrinterSharing, Get-SmbSharePermissions, Set-PrinterSharePermission, Set-PrinterSharingTransport, Get-PrinterSharingCompatibility

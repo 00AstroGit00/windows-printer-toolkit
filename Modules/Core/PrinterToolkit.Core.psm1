@@ -144,7 +144,11 @@ function Get-Printers {
     [CmdletBinding()]
     [OutputType([array])]
     param()
-    return @(Get-Printer -ErrorAction SilentlyContinue)
+    try {
+        return ,@(Get-Printer -ErrorAction SilentlyContinue)
+    } catch {
+        return ,@()
+    }
 }
 
 function Set-DefaultPrinter {

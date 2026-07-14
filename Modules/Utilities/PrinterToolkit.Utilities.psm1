@@ -123,7 +123,7 @@ function Write-MenuHeader {
         [string]$Subtitle = ''
     )
 
-    Clear-Host
+    try { Clear-Host } catch { }
     $line = '=' * 74
     Write-Host $line -ForegroundColor Cyan
     Write-Host "  $Title" -ForegroundColor White
@@ -140,7 +140,7 @@ function Wait-Menu {
     param()
     Write-Host ''
     Write-Host 'Press any key to continue...' -ForegroundColor DarkGray
-    $null = $Host.UI.RawUI.ReadKey('NoEcho,IncludeKeyDown')
+    try { $null = $Host.UI.RawUI.ReadKey('NoEcho,IncludeKeyDown') } catch { }
 }
 
 Export-ModuleMember -Function Test-Administrator, Test-Elevated, Assert-Elevated, Confirm-DestructiveAction, Get-SystemInfo, Write-MenuHeader, Wait-Menu
