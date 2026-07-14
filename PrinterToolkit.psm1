@@ -53,6 +53,7 @@ Write-Verbose "PrinterToolkit v$Script:ToolkitVersion loaded. $($LoadedModules.C
 function Get-ToolkitStatus {
     [CmdletBinding()]
     [OutputType([PSCustomObject])]
+    param()
 
     [PSCustomObject]@{
         Version         = $Script:ToolkitVersion
@@ -65,6 +66,7 @@ function Get-ToolkitStatus {
 
 function Invoke-ToolkitMainMenu {
     [CmdletBinding()]
+    param()
 
     if (-not (Test-Administrator)) {
         Write-Host 'PrinterToolkit v5.0.1' -ForegroundColor Cyan
