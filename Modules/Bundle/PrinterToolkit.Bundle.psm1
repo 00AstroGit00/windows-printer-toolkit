@@ -159,14 +159,22 @@ function New-DiagnosticBundle {
         Write-Host ' OK' -ForegroundColor Green
     } catch { Write-Host ' FAILED' -ForegroundColor Red }
 
-    # 12. Manifest
-    Write-Host '  [12/12] Creating manifest...' -NoNewline
+    # 12. Validation Dashboard
+    Write-Host '  [12/13] Validation dashboard...' -NoNewline
+    try {
+        $validation = Invoke-EndToEndValidation -ErrorAction SilentlyContinue
+        $validation | ConvertTo-Json -Depth 4 | Out-File -FilePath (Join-Path -Path $OutputPath -ChildPath 'validation_dashboard.json') -Encoding UTF8
+        Write-Host ' OK' -ForegroundColor Green
+    } catch { Write-Host ' FAILED' -ForegroundColor Red }
+
+    # 13. Manifest
+    Write-Host '  [13/13] Creating manifest...' -NoNewline
     try {
         $allFiles = Get-ChildItem -Path $OutputPath -Recurse -File -ErrorAction SilentlyContinue
         $manifest = [PSCustomObject]@{
             GeneratedAt    = Get-Date -Format 'yyyy-MM-dd HH:mm:ss'
             ComputerName   = $env:COMPUTERNAME
-            ToolkitVersion = '5.0.1'
+            ToolkitVersion = '6.0.0'
             FileCount      = $allFiles.Count
             TotalSizeKB    = [math]::Round(($allFiles | Measure-Object -Property Length -Sum).Sum / 1KB, 1)
         }

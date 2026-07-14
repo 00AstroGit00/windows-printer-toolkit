@@ -35,8 +35,8 @@ $ErrorActionPreference = 'Stop'
 $owner = '00AstroGit00'
 $repo = 'windows-printer-toolkit'
 
-Write-Host 'PrinterToolkit v5.0.1 — Bootstrap Installer' -ForegroundColor Cyan
-Write-Host '=========================================' -ForegroundColor Cyan
+Write-Host 'PrinterToolkit v8.0.0 — Print Server Bootstrap Installer' -ForegroundColor Cyan
+Write-Host '======================================================' -ForegroundColor Cyan
 Write-Host ''
 
 $tmpBase = Join-Path -Path $env:TEMP -ChildPath "PrinterToolkit"

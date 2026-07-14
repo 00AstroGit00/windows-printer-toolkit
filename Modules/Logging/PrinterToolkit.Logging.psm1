@@ -16,6 +16,7 @@ $Script:CurrentLogFile = $null
 $Script:LogLevelMap = @{DEBUG=0; INFO=1; OK=1; WARN=2; ERROR=3; FATAL=4}
 $Script:LogLevelThreshold = 0
 $Script:LogEntries = [System.Collections.ArrayList]::new()
+$Script:LogComponent = 'PrinterToolkit'
 
 function Initialize-Logging {
     [CmdletBinding()]
@@ -27,7 +28,10 @@ function Initialize-Logging {
 
         [Parameter(Mandatory = $false)]
         [ValidateSet('DEBUG', 'INFO', 'OK', 'WARN', 'ERROR', 'FATAL')]
-        [string]$Level = 'INFO'
+        [string]$Level = 'INFO',
+
+        [Parameter(Mandatory = $false)]
+        [string]$Component = 'PrinterToolkit'
     )
 
     if (-not $Path) {
@@ -38,6 +42,7 @@ function Initialize-Logging {
     $null = New-Item -ItemType Directory -Force -Path $Script:LogPath
     $Script:CurrentLogFile = Join-Path -Path $Script:LogPath -ChildPath "PrinterToolkit_$(Get-Date -Format 'yyyyMMdd_HHmmss').log"
     $Script:LogLevelThreshold = $Script:LogLevelMap[$Level]
+    $Script:LogComponent = $Component
 
     if (-not $Script:LogLevelThreshold) {
         $Script:LogLevelThreshold = 0
@@ -69,7 +74,8 @@ function Write-Log {
             return
         }
 
-        $line = "[$timestamp] [$Level] $Message"
+        $component = if ($Script:LogComponent) { "[$($Script:LogComponent)] " } else { '' }
+        $line = "[$timestamp] [$Level] ${component}$Message"
 
         # Write to file
         if (-not $Script:CurrentLogFile) {

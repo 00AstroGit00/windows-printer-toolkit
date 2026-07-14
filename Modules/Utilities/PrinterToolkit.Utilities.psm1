@@ -107,7 +107,7 @@ function Get-SystemInfo {
         IPv4Addresses      = ($ipAddresses) -join ', '
         SharedPrinters     = @($sharedPrinters)
         Timestamp          = Get-Date
-        ToolkitVersion     = '5.0.1'
+        ToolkitVersion     = '8.1.0'
     }
 }
 

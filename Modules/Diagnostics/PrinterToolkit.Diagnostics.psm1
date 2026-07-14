@@ -84,7 +84,7 @@ function Get-NetworkValidation {
             if ($enabled) {
                 &$addCheck "Firewall: $group" 'Firewall' $true 'Enabled' '' "$(@($rules).Count) rules"
             } else {
-                &$addCheck "Firewall: $group" 'Firewall' $false 'Disabled' "netsh advfirewall firewall set rule group=`"$group`" new enable=Yes" ''
+                &$addCheck "Firewall: $group" 'Firewall' $false 'Disabled' "Enable the '$group' firewall rule group (e.g. Enable-NetFirewallRule -DisplayGroup '$group' or use Firewall Setup)" ''
             }
         } catch {
             &$addCheck "Firewall: $group" 'Firewall' $false 'Check failed' 'Run wf.msc' $_

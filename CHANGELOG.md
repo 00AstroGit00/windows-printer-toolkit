@@ -1,5 +1,72 @@
 # Changelog
 
+## [8.0.0] - 2026-07-14
+
+### Added
+- **Orchestration Engine** (`Orchestration`): declarative Task model with dependencies, prerequisites, retry policy, and rollback
+- DAG resolver (`Get-TopologicalTaskOrder`) with cycle detection for deterministic execution order
+- Event Bus for structured, subscribable deployment events (`Subscribe-OrchestrationEvent`, `Publish-OrchestrationEvent`, `Get-OrchestrationEventLog`)
+- State Manager tracking subsystem health (`Set-SubsystemState`, `Get-SubsystemState`, `Get-OrchestrationStateReport`, `Reset-OrchestrationState`)
+- Transaction Engine recording per-task state transitions (`Start-OrchestrationTransaction`, `Record-TaskTransaction`, `Get-OrchestrationTransactionLog`)
+- Desired-State model (`Get-DefaultDesiredState`, `Get-DesiredState`) with Configuration Providers (Service, Firewall, Network, Sharing, IPP, Registry, Driver, Printer)
+- Orchestrator (`Invoke-Orchestrator`) executing the dependency graph with skip/retry/rollback/recovery semantics
+- Recovery Engine (`Invoke-RecoveryEngine`) and consolidated reporting (`Get-OrchestrationReport`)
+- Orchestration module added to manifest `NestedModules` and `FunctionsToExport`
+
+### Changed
+- `Start-ZeroTouchDeployment` refactored to build a deployment DAG and run through `Invoke-Orchestrator`; public signature and return shape preserved
+- Version unified to 8.0.0 across all source files (manifest, loader, installer, utilities, rollback, docs, tests)
+
+## [7.0.0] - 2026-07-14
+
+### Added
+- **Zero-Touch Deployment Engine** (`ZeroTouch`): Single-action print server deployment following the lifecycle Detect → Analyze → Backup → Configure → Validate → Rollback → Report
+- `Start-ZeroTouchDeployment`: one-click deployment of a connected USB printer as a shared print server
+- `Invoke-GuidedRecovery`: repairs only the failing validation layers (driver, queue, spooler, share, firewall, network discovery, IPP, SMB, client access) without repeating successful steps
+- `Get-DeploymentHealth` / `Get-ZeroTouchDashboard`: color-coded health score and live system status across printer, driver, share, firewall, IPP, SMB, network, and services
+- `Get-ClientConnectionInfo`: per-OS connection strings (Windows SMB, macOS, Android/Mopria, Linux CUPS) with prerequisites and QR payloads
+- Per-deployment transaction log: separate Operation, Change, Repair, Validation, and Rollback logs under `$env:TEMP\PrinterToolkit_ZeroTouch`
+- `Test-DriverSignature`: validates driver digital signature, signer, and status via `Get-AuthenticodeSignature`
+- Dashboard menu entry `[Z] Zero-Touch Deployment`
+
+### Changed
+- Version unified to 7.0.0 across all source files (manifest, loader, installer, utilities, rollback, docs, tests)
+- New ZeroTouch module added to manifest `NestedModules` and `FunctionsToExport`
+
+## [6.0.0] - 2026-07-14
+
+### Added
+- Complete transformation from Printer Repair Toolkit to Automated Windows Print Server Deployment Platform
+- **Print Server Wizard** (`SetupWizard`): 11-step guided wizard — USB detection → driver install → Windows features → registry → firewall → network → sharing → IPP → SMB → validation → test page + connection info
+- **Validation Dashboard** (`Validation`): End-to-end PASS/FAIL dashboard checking printer, driver, queue, port, spooler, services, registry, firewall, sharing, SMB, IPP, network, Android compatibility, and test page
+- **Detection Engine** (`Detection`): USB printer detection with VID, PID, Hardware IDs, Compatible IDs, manufacturer, model, and connection protocol
+- **Configuration Intelligence Engine** (`Configuration`): Windows Features, Services, Registry, and Firewall inspection with expected-vs-actual comparison
+- **Driver Intelligence Engine** (`Drivers`): Full driver detection — VID/PID, Hardware IDs, Compatible IDs, manufacturer, model, driver store package, driver version, Type 3/4, architecture, WHQL status, signature verification
+- **Automatic Repair Engine** (`Repair`): Complete repair cycle — Issue → Root Cause → Backup → Repair → Validate → Success or Rollback. Never leaves partial repairs
+- **Rollback Engine** (`Rollback`): Full configuration rollback — registry, services, printers, and network restore points with one-command restore
+- **Networking Module** (`Networking`): Network profile management, firewall rule management, IPP/WSD/File & Printer Sharing rule configuration
+- **SMB Configuration Module** (`SMB`): SMB 1.0/2/3 protocol configuration, SMB server settings, printer share enumeration
+- **Client Connectivity** (`Android`): Connection strings for Windows (`\\ComputerName\Share`), SMB, IPP (`ipp://hostname/printers/Printer`), HTTP (`http://hostname:631/printers/Printer`), with QR code content generation
+- **Get-ConnectionInfo**: Generates structured connection information for all shared printers
+- **New-ConnectionQRCode**: Generates IPP URL, Setup Guide, and Troubleshooting Guide QR code content
+- **Markdown report format** in `New-PrinterReport -Format Markdown`
+- 18 specialized submodules (up from 11)
+- 66+ exported functions (up from 55)
+
+### Changed
+- Version unified to 6.0.0 across all source files
+- Module manifest updated with new module paths and v6.0 description
+- Root module (`PrinterToolkit.psm1`) restructured menu with Print Server Wizard, Validation Dashboard, Connection Info sections
+- Repair module rewritten with `Invoke-RepairCycle` for atomic issue→rootcause→backup→repair→validate→rollback
+- Reporting module enhanced with Markdown format and validation dashboard integration
+- Driver module enhanced with `Get-DriverIntelligence` for comprehensive driver detection
+- Android module enhanced with `Get-ConnectionInfo` and `New-ConnectionQRCode`
+- Bundle module enhanced with validation dashboard collection
+- Logging module enhanced with component tracking
+- Core module enhanced with `Get-PrinterWmiDetail`
+- Test suite expanded to cover all 18 modules and 66+ functions
+- README completely rewritten for v6.0 print server platform focus
+
 ## [5.0.2] - 2026-07-14
 
 ### Fixed
