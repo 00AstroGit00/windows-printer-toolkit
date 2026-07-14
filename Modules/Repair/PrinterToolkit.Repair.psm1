@@ -18,7 +18,7 @@ $Script:BackupPath = $null
 function Initialize-RepairBackup {
     [CmdletBinding()]
     [OutputType([string])]
-
+    param()
     $Script:BackupPath = Join-Path -Path ([Environment]::GetFolderPath('Desktop')) -ChildPath "PrinterToolkit_RepairBackup_$(Get-Date -Format 'yyyyMMdd_HHmmss')"
     $null = New-Item -ItemType Directory -Force -Path $Script:BackupPath
 

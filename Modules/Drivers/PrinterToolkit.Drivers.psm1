@@ -14,7 +14,7 @@
 function Get-PrinterDriverDetails {
     [CmdletBinding()]
     [OutputType([array])]
-
+    param()
     $drivers = @(Get-PrinterDriver -ErrorAction SilentlyContinue)
     $results = foreach ($d in $drivers) {
         $infPath = ''
@@ -201,7 +201,7 @@ function Remove-PrinterDriverByName {
 function Get-DriverUpgradeRecommendations {
     [CmdletBinding()]
     [OutputType([array])]
-
+    param()
     $drivers = Get-PrinterDriverDetails
     $recommendations = foreach ($d in $drivers) {
         $notes = @()

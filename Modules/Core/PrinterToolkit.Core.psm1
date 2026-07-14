@@ -17,6 +17,7 @@ $Script:RegPrintRoot = 'HKLM:\SYSTEM\CurrentControlSet\Control\Print'
 function Get-PrinterStatus {
     [CmdletBinding()]
     [OutputType([PSCustomObject])]
+    param()
     $svc = Get-Service -Name Spooler -ErrorAction SilentlyContinue
     $printers = @(Get-Printer -ErrorAction SilentlyContinue)
 
@@ -70,7 +71,7 @@ function Stop-Spooler {
 function Start-Spooler {
     [CmdletBinding()]
     [OutputType([bool])]
-
+    param()
     Assert-Elevated
 
     try {
@@ -124,7 +125,7 @@ function Clear-PrintQueue {
 function Restart-Spooler {
     [CmdletBinding()]
     [OutputType([PSCustomObject])]
-
+    param()
     Assert-Elevated
 
     $stopped = Stop-Spooler -Force
@@ -142,6 +143,7 @@ function Restart-Spooler {
 function Get-Printers {
     [CmdletBinding()]
     [OutputType([array])]
+    param()
     return @(Get-Printer -ErrorAction SilentlyContinue)
 }
 
@@ -209,13 +211,14 @@ function Get-PrinterQueueHealth {
 function Get-SharedPrinters {
     [CmdletBinding()]
     [OutputType([array])]
+    param()
     return @(Get-Printer -ErrorAction SilentlyContinue | Where-Object { $_.Shared })
 }
 
 function Enable-PrintSharing {
     [CmdletBinding()]
     [OutputType([bool])]
-
+    param()
     Assert-Elevated
 
     try {

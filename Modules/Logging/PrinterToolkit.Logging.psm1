@@ -106,6 +106,7 @@ function Write-Log {
 function Get-LogFilePath {
     [CmdletBinding()]
     [OutputType([PSCustomObject])]
+    param()
     $path = $Script:CurrentLogFile
     [PSCustomObject]@{
         Path   = $path

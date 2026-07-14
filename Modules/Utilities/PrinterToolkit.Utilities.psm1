@@ -14,6 +14,7 @@
 function Test-Administrator {
     [CmdletBinding()]
     [OutputType([bool])]
+    param()
     try {
         $identity = [System.Security.Principal.WindowsIdentity]::GetCurrent()
         $principal = New-Object System.Security.Principal.WindowsPrincipal($identity)
@@ -26,12 +27,14 @@ function Test-Administrator {
 function Test-Elevated {
     [CmdletBinding()]
     [OutputType([bool])]
+    param()
     return (Test-Administrator)
 }
 
 function Assert-Elevated {
     [CmdletBinding()]
     [OutputType([void])]
+    param()
     if (-not (Test-Administrator)) {
         throw 'Administrator privileges required. Right-click and select "Run as Administrator".'
     }
@@ -67,7 +70,7 @@ function Confirm-DestructiveAction {
 function Get-SystemInfo {
     [CmdletBinding()]
     [OutputType([PSCustomObject])]
-
+    param()
     $os = Get-CimInstance -ClassName Win32_OperatingSystem -ErrorAction SilentlyContinue
     $cs = Get-CimInstance -ClassName Win32_ComputerSystem -ErrorAction SilentlyContinue
 
@@ -134,6 +137,7 @@ function Write-MenuHeader {
 function Wait-Menu {
     [CmdletBinding()]
     [OutputType([void])]
+    param()
     Write-Host ''
     Write-Host 'Press any key to continue...' -ForegroundColor DarkGray
     $null = $Host.UI.RawUI.ReadKey('NoEcho,IncludeKeyDown')

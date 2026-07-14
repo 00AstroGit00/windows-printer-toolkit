@@ -14,7 +14,7 @@
 function Get-IPPStatus {
     [CmdletBinding()]
     [OutputType([PSCustomObject])]
-
+    param()
     $result = [PSCustomObject]@{
         IISInstalled               = $false
         PrintServerIIS             = $false
@@ -66,7 +66,7 @@ function Get-IPPStatus {
 function Get-IPPUrls {
     [CmdletBinding()]
     [OutputType([array])]
-
+    param()
     $hostname = $env:COMPUTERNAME
 
     $ipv4 = @()
@@ -206,6 +206,7 @@ function Install-IPPServer {
 function Test-IPPClientInstalled {
     [CmdletBinding()]
     [OutputType([bool])]
+    param()
     try {
         $feature = Get-WindowsOptionalFeature -Online -FeatureName 'Printing-InternetPrinting-Client' -ErrorAction SilentlyContinue
         return ($feature -and $feature.State -eq 'Enabled')

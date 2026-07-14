@@ -59,7 +59,7 @@ function New-PrinterReport {
 function Get-PrinterReportData {
     [CmdletBinding()]
     [OutputType([PSCustomObject])]
-
+    param()
     $printers = @(Get-Printer -ErrorAction SilentlyContinue)
     $drivers = @(Get-PrinterDriver -ErrorAction SilentlyContinue)
     $ports = @(Get-PrinterPort -ErrorAction SilentlyContinue)
@@ -215,7 +215,7 @@ function New-PrinterReportCsv {
 function Get-PrintComplianceReport {
     [CmdletBinding()]
     [OutputType([array])]
-
+    param()
     $printers = @(Get-Printer -ErrorAction SilentlyContinue)
     $drivers = @(Get-PrinterDriver -ErrorAction SilentlyContinue)
 

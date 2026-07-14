@@ -14,7 +14,7 @@
 function Get-AndroidCompatibility {
     [CmdletBinding()]
     [OutputType([PSCustomObject])]
-
+    param()
     $hostname = $env:COMPUTERNAME
 
     $ipv4 = @()
@@ -104,7 +104,7 @@ function Get-AndroidCompatibility {
 function Show-AndroidWizard {
     [CmdletBinding()]
     [OutputType([void])]
-
+    param()
     $compat = Get-AndroidCompatibility
 
     Write-MenuHeader -Title 'Android Compatibility Wizard' -Subtitle 'Detecting Android printing capabilities'

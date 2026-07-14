@@ -15,7 +15,7 @@
 function Get-PrinterShareStatus {
     [CmdletBinding()]
     [OutputType([array])]
-
+    param()
     $printers = @(Get-Printer -ErrorAction SilentlyContinue)
     $results = foreach ($p in $printers) {
         $driver = Get-PrinterDriver -Name $p.DriverName -ErrorAction SilentlyContinue
@@ -108,7 +108,7 @@ function Disable-PrinterSharing {
 function Get-SmbSharePermissions {
     [CmdletBinding()]
     [OutputType([array])]
-
+    param()
     $shares = @(Get-SmbShare -ErrorAction SilentlyContinue | Where-Object { $_.ShareType -eq 0 })
     $results = foreach ($s in $shares) {
         $perms = @(Get-SmbShareAccess -Name $s.Name -ErrorAction SilentlyContinue)
@@ -208,7 +208,7 @@ function Set-PrinterSharingTransport {
 function Get-PrinterSharingCompatibility {
     [CmdletBinding()]
     [OutputType([array])]
-
+    param()
     $printers = Get-PrinterShareStatus
     $results = foreach ($p in $printers) {
         $warnings = @()

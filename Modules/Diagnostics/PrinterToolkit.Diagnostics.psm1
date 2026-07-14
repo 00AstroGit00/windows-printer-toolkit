@@ -16,7 +16,7 @@ $Script:RegPrintRoot = 'HKLM:\SYSTEM\CurrentControlSet\Control\Print'
 function Get-NetworkValidation {
     [CmdletBinding()]
     [OutputType([PSCustomObject])]
-
+    param()
     $checks = [System.Collections.ArrayList]::new()
 
     $addCheck = {
