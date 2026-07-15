@@ -1,6 +1,6 @@
 <#
 .SYNOPSIS
-    PrinterToolkit v8.1.0 - Dependency-Aware Print Server Orchestration Platform.
+    PrinterToolkit v8.2.0 - Dependency-Aware Print Server Orchestration Platform.
 
 .DESCRIPTION
     Transforms a USB-connected printer into a fully configured, validated,
@@ -10,11 +10,16 @@
     expressed as declarative tasks resolved and executed by a DAG-based orchestrator.
 
 .NOTES
-    Version: 8.1.0
+    Version: 8.2.0
     Author: PrinterToolkit Contributors
 #>
 
 $ModuleRoot = $PSScriptRoot
+
+$currentPrincipal = New-Object Security.Principal.WindowsPrincipal([Security.Principal.WindowsIdentity]::GetCurrent())
+if (-not $currentPrincipal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) {
+    Write-Warning 'PrinterToolkit requires Administrator privileges. Most operations will fail without elevation. Re-import the module from an elevated PowerShell session.'
+}
 $ModulePaths = @(
     "$ModuleRoot\Modules\Core\PrinterToolkit.Core.psm1"
     "$ModuleRoot\Modules\Detection\PrinterToolkit.Detection.psm1"
@@ -57,7 +62,7 @@ foreach ($modPath in $ModulePaths) {
     }
 }
 
-$Script:ToolkitVersion = '8.1.0'
+$Script:ToolkitVersion = '8.2.0'
 $Script:LoadedModules = $LoadedModules
 $Script:FailedModules = $FailedModules
 
@@ -82,7 +87,7 @@ function Invoke-ToolkitMainMenu {
     param()
 
     if (-not (Test-Administrator)) {
-        Write-Host 'PrinterToolkit v8.1.0' -ForegroundColor Cyan
+        Write-Host 'PrinterToolkit v8.2.0' -ForegroundColor Cyan
         Write-Host '====================' -ForegroundColor Cyan
         Write-Host 'NOTE: Print Server operations require Administrator privileges.' -ForegroundColor Yellow
         Write-Host 'Run as Administrator for full functionality.' -ForegroundColor Yellow
@@ -94,7 +99,7 @@ function Invoke-ToolkitMainMenu {
         Clear-Host
         Write-Host ''
         Write-Host '========================================' -ForegroundColor Cyan
-        Write-Host '    PrinterToolkit v8.1.0' -ForegroundColor White
+        Write-Host '    PrinterToolkit v8.2.0' -ForegroundColor White
         Write-Host '    Print Server Deployment Platform' -ForegroundColor Gray
         Write-Host '========================================' -ForegroundColor Cyan
         Write-Host ''

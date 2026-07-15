@@ -33,7 +33,7 @@ $ModuleRoot = Split-Path -Parent $PSScriptRoot
 $Timestamp = Get-Date -Format 'yyyyMMdd_HHmmss'
 
 $buildFailed = $false
-$toolkitVersion = '8.0.0'
+$toolkitVersion = '8.2.0'
 $manifestPath = Join-Path -Path $ModuleRoot -ChildPath 'PrinterToolkit.psd1'
 if (Test-Path -Path $manifestPath) {
     $manifestData = Import-PowerShellDataFile -Path $manifestPath -ErrorAction SilentlyContinue
@@ -64,7 +64,8 @@ $expectedDirs = @(
     'Modules\Networking', 'Modules\IPP', 'Modules\SMB', 'Modules\Sharing',
     'Modules\Android', 'Modules\Diagnostics', 'Modules\Repair', 'Modules\Rollback',
     'Modules\Validation', 'Modules\SetupWizard', 'Modules\Reporting', 'Modules\Logging',
-    'Modules\Utilities', 'Modules\Bundle'
+    'Modules\Utilities', 'Modules\Bundle', 'Modules\ZeroTouch', 'Modules\Orchestration',
+    'Modules\Providers'
 )
 $missingDirs = @()
 foreach ($dir in $expectedDirs) {

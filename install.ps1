@@ -1,6 +1,6 @@
 <#
 .SYNOPSIS
-    PrinterToolkit v5.0.1 — Bootstrap installer & launcher.
+    PrinterToolkit v8.2.0-rc1 — Bootstrap installer & launcher.
 
 .DESCRIPTION
     Downloads the latest PrinterToolkit release from GitHub, extracts it,
@@ -35,7 +35,7 @@ $ErrorActionPreference = 'Stop'
 $owner = '00AstroGit00'
 $repo = 'windows-printer-toolkit'
 
-Write-Host 'PrinterToolkit v8.0.0 — Print Server Bootstrap Installer' -ForegroundColor Cyan
+Write-Host 'PrinterToolkit v8.2.0-rc1 — Print Server Bootstrap Installer' -ForegroundColor Cyan
 Write-Host '======================================================' -ForegroundColor Cyan
 Write-Host ''
 

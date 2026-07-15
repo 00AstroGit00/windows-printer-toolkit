@@ -1,6 +1,11 @@
 # PrinterToolkit — Maintainer Guide
 
-**Version:** 5.2
+> **⚠️ HISTORICAL DOCUMENT — describes v5.0.1 architecture.**
+> The current version is **v8.2.0-rc1** (see `docs/v8.2/`). This document is maintained as a reference
+> for architecture patterns and processes. Numbers (55 functions, 11 submodules, 49 tests) are **stale**
+> and do not reflect the current codebase. Do not infer runtime success for v8.x from this content.
+
+**Version:** 5.2 (doc revision — codebase is v8.2.0-rc1)
 **Date:** 2026-07-14
 **Audience:** Incoming maintainers and core contributors
 

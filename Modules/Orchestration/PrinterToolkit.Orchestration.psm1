@@ -70,6 +70,7 @@ $Script:SubsystemStates = @{}
 $Script:ActiveTransaction = $null
 $Script:TransactionLog = [System.Collections.ArrayList]::new()
 $Script:OrchestrationEvents = [System.Collections.ArrayList]::new()
+$Script:ProviderPreState = @{}
 
 # ---------------------------------------------------------------------------
 # Event Bus
@@ -100,6 +101,68 @@ function Publish-OrchestrationEvent {
         if ($sub.EventName -eq $EventName -or $sub.EventName -eq '*') {
             try { & $sub.Handler $evt } catch {}
         }
+    }
+}
+
+function Get-OrchestrationEventLog {
+    [CmdletBinding()]
+    [OutputType([PSCustomObject])]
+    param(
+        [Parameter(Mandatory = $false)][string]$EventName,
+        [Parameter(Mandatory = $false)][int]$Tail = 0
+    )
+    $events = $Script:OrchestrationEvents
+    if ($EventName) {
+        $events = $events | Where-Object { $_.EventName -eq $EventName }
+    }
+    if ($Tail -gt 0) {
+        $events = $events | Select-Object -Last $Tail
+    }
+    [PSCustomObject]@{
+        EventCount = @($events).Count
+        Events     = @($events)
+    }
+}
+
+function Reset-OrchestrationState {
+    [CmdletBinding()]
+    [OutputType([void])]
+    param(
+        [Parameter(Mandatory = $false)][switch]$KeepTransactionLog
+    )
+    $Script:SubsystemStates = @{}
+    $Script:OrchestrationEvents = [System.Collections.ArrayList]::new()
+    $Script:ActiveTransaction = $null
+    $Script:EventSubscribers = [System.Collections.ArrayList]::new()
+    $Script:ProviderPreState = @{}
+    if (-not $KeepTransactionLog) {
+        $Script:TransactionLog = [System.Collections.ArrayList]::new()
+    }
+}
+
+function Get-OrchestrationStateReport {
+    [CmdletBinding()]
+    [OutputType([PSCustomObject])]
+    param()
+    $states = $Script:SubsystemStates.Clone()
+    $all = @($states.Values)
+    $healthy = @($all | Where-Object { $_.State -eq 'Healthy' }).Count
+    $warning = @($all | Where-Object { $_.State -eq 'Warning' }).Count
+    $failed = @($all | Where-Object { $_.State -eq 'Failed' }).Count
+    $pending = @($all | Where-Object { $_.State -eq 'Pending' }).Count
+    $unknown = @($all | Where-Object { $_.State -eq 'Unknown' }).Count
+    $total = $all.Count
+    [PSCustomObject]@{
+        GeneratedAt   = Get-Date
+        TotalSubsystems = $total
+        Healthy       = $healthy
+        Warning       = $warning
+        Failed        = $failed
+        Pending       = $pending
+        Unknown       = $unknown
+        OverallHealth = if ($total -eq 0) { 'Unknown' } elseif ($failed -gt 0) { 'Failed' } elseif ($warning -gt 0) { 'Warning' } elseif ($pending -gt 0) { 'Pending' } else { 'Healthy' }
+        HealthScore   = if ($total -gt 0) { [math]::Round(($healthy / $total) * 100, 1) } else { 0 }
+        SubsystemStates = @($all | Sort-Object Subsystem)
     }
 }
 
@@ -375,9 +438,15 @@ function Invoke-ConfigurationProvider {
                     return ,@($plan)
                 }
                 'ApplyChanges' {
+                    $preState = @{}
                     foreach ($p in $DesiredState.Services.PSObject.Properties) {
+                        $sv = Get-Service -Name $p.Name -ErrorAction SilentlyContinue
+                        if ($sv) {
+                            $preState[$p.Name] = @{ Status = $sv.Status.ToString(); StartType = $sv.StartType.ToString() }
+                        }
                         Set-ServiceConfiguration -ServiceName $p.Name -StartType Automatic -EnsureRunning -ErrorAction SilentlyContinue
                     }
+                    $Script:ProviderPreState['Service'] = $preState
                     return $true
                 }
                 'Validate' {
@@ -387,7 +456,23 @@ function Invoke-ConfigurationProvider {
                     }
                     return $true
                 }
-                'Rollback' { return $true }
+                'Rollback' {
+                    $pre = $Script:ProviderPreState['Service']
+                    if (-not $pre) { return $true }
+                    foreach ($entry in $pre.GetEnumerator()) {
+                        $sv = Get-Service -Name $entry.Key -ErrorAction SilentlyContinue
+                        if (-not $sv) { continue }
+                        try {
+                            Set-Service -Name $entry.Key -StartupType $entry.Value.StartType -ErrorAction SilentlyContinue
+                            if ($entry.Value.Status -eq 'Running') {
+                                Start-Service -Name $entry.Key -ErrorAction SilentlyContinue
+                            } else {
+                                Stop-Service -Name $entry.Key -Force -ErrorAction SilentlyContinue
+                            }
+                        } catch {}
+                    }
+                    return $true
+                }
             }
         }
         'Firewall' {
@@ -403,6 +488,14 @@ function Invoke-ConfigurationProvider {
                 'GetDesiredState' { return [PSCustomObject]@{ IPP = $DesiredState.Firewall.IPP; SMB = $DesiredState.Firewall.SMB; Discovery = $DesiredState.Firewall.Discovery } }
                 'PlanChanges' { return ,@([PSCustomObject]@{ Action = 'Enable File/Printer Sharing, Network Discovery, IPP 631' }) }
                 'ApplyChanges' {
+                    $preState = @{ Groups = @{}; Ipp = $false }
+                    foreach ($g in @('File and Printer Sharing', 'Network Discovery')) {
+                        $rules = Get-NetFirewallRule -DisplayGroup $g -ErrorAction SilentlyContinue
+                        $preState.Groups[$g] = @($rules | Where-Object { $_.Enabled }).Count -gt 0
+                    }
+                    $ipp = Get-NetFirewallRule -DisplayName 'IPP Printer Port 631' -ErrorAction SilentlyContinue
+                    $preState.Ipp = ($ipp -and $ipp.Enabled)
+                    $Script:ProviderPreState['Firewall'] = $preState
                     $null = Enable-PrinterFirewallRules -IncludeIpp
                     return $true
                 }
@@ -412,7 +505,21 @@ function Invoke-ConfigurationProvider {
                     $ipp = Get-NetFirewallRule -DisplayName 'IPP Printer Port 631' -ErrorAction SilentlyContinue
                     return ($fpOk -and $ipp -and $ipp.Enabled)
                 }
-                'Rollback' { return $true }
+                'Rollback' {
+                    $pre = $Script:ProviderPreState['Firewall']
+                    if (-not $pre) { return $true }
+                    foreach ($g in $pre.Groups.GetEnumerator()) {
+                        if (-not $g.Value) {
+                            $rules = Get-NetFirewallRule -DisplayGroup $g.Key -ErrorAction SilentlyContinue
+                            if ($rules) { $rules | Disable-NetFirewallRule -ErrorAction SilentlyContinue }
+                        }
+                    }
+                    if (-not $pre.Ipp) {
+                        $ipp = Get-NetFirewallRule -DisplayName 'IPP Printer Port 631' -ErrorAction SilentlyContinue
+                        if ($ipp) { $ipp | Disable-NetFirewallRule -ErrorAction SilentlyContinue }
+                    }
+                    return $true
+                }
             }
         }
         'Network' {
@@ -430,6 +537,7 @@ function Invoke-ConfigurationProvider {
                 'ApplyChanges' {
                     $p = Get-NetConnectionProfile -ErrorAction SilentlyContinue | Select-Object -First 1
                     if ($p -and $p.NetworkCategory -ne $DesiredState.Network.Profile) {
+                        $Script:ProviderPreState['Network'] = @{ InterfaceIndex = $p.InterfaceIndex; Category = $p.NetworkCategory.ToString() }
                         Set-NetConnectionProfile -InterfaceIndex $p.InterfaceIndex -NetworkCategory $DesiredState.Network.Profile -ErrorAction SilentlyContinue
                     }
                     return $true
@@ -438,7 +546,14 @@ function Invoke-ConfigurationProvider {
                     $p = Get-NetConnectionProfile -ErrorAction SilentlyContinue | Select-Object -First 1
                     return ($p -and $p.NetworkCategory -eq $DesiredState.Network.Profile)
                 }
-                'Rollback' { return $true }
+                'Rollback' {
+                    $pre = $Script:ProviderPreState['Network']
+                    if (-not $pre) { return $true }
+                    try {
+                        Set-NetConnectionProfile -InterfaceIndex $pre.InterfaceIndex -NetworkCategory $pre.Category -ErrorAction SilentlyContinue
+                    } catch {}
+                    return $true
+                }
             }
         }
         'Sharing' {
@@ -454,17 +569,27 @@ function Invoke-ConfigurationProvider {
                     return @()
                 }
                 'ApplyChanges' {
-                    $p = if ($PrinterName) { Get-Printer -Name $PrinterName -ErrorAction SilentlyContinue } else { Get-Printer -ErrorAction SilentlyContinue | Select-Object -First 1 }
-                    if (-not $p) { return $false }
+                    $p = if ($PrinterName) { Get-Printer -Name $PrinterName -ErrorAction SilentlyContinue } else { Get-Printer -ErrorAction SilentlyContinue | Where-Object { $_.Shared } | Select-Object -First 1 }
+                    if (-not $p) { Write-Log -Message 'Sharing.ApplyChanges: no printer found' -Level 'WARN'; return $false }
                     $sn = if ($ShareName) { $ShareName } else { $p.Name -replace '[^a-zA-Z0-9_-]', '_' }
+                    $Script:ProviderPreState['Sharing'] = @{ PrinterName = $p.Name; WasShared = $p.Shared; ShareName = $p.ShareName }
                     $r = Enable-PrinterSharing -PrinterName $p.Name -ShareName $sn -ErrorAction SilentlyContinue
-                    return ($r -and $r.Success)
+                    $ok = ($r -and $r.Success)
+                    if (-not $ok) { Write-Log -Message "Sharing.ApplyChanges: Enable-PrinterSharing failed for $($p.Name)" -Level 'WARN' }
+                    return $ok
                 }
                 'Validate' {
                     $p = if ($PrinterName) { Get-Printer -Name $PrinterName -ErrorAction SilentlyContinue } else { Get-Printer -ErrorAction SilentlyContinue | Where-Object { $_.Shared } | Select-Object -First 1 }
                     return ($p -and $p.Shared)
                 }
-                'Rollback' { return $true }
+                'Rollback' {
+                    $pre = $Script:ProviderPreState['Sharing']
+                    if (-not $pre) { return $true }
+                    if (-not $pre.WasShared) {
+                        try { Disable-PrinterSharing -PrinterName $pre.PrinterName -ErrorAction SilentlyContinue } catch {}
+                    }
+                    return $true
+                }
             }
         }
         'IPP' {
@@ -472,9 +597,24 @@ function Invoke-ConfigurationProvider {
                 'GetCurrentState' { $s = Get-IPPStatus -ErrorAction SilentlyContinue; return [PSCustomObject]@{ Enabled = ($s -and $s.IPPUrls.Count -gt 0); Urls = if ($s) { $s.IPPUrls } else { @() } } }
                 'GetDesiredState' { return [PSCustomObject]@{ Enabled = $DesiredState.IPP.Enabled } }
                 'PlanChanges' { $s = Get-IPPStatus -ErrorAction SilentlyContinue; if (-not ($s -and $s.IPPUrls.Count -gt 0)) { return ,@([PSCustomObject]@{ Action = 'Install IPP' }) }; return @() }
-                'ApplyChanges' { $r = Install-IPPServer -Force -ErrorAction SilentlyContinue; return ($r -and $r.Success) }
+                'ApplyChanges' {
+                    $s = Get-IPPStatus -ErrorAction SilentlyContinue
+                    $Script:ProviderPreState['IPP'] = @{ WasInstalled = ($s -and $s.IPPUrls.Count -gt 0) }
+                    $r = Install-IPPServer -Force -ErrorAction SilentlyContinue
+                    return ($r -and $r.Success)
+                }
                 'Validate' { $s = Get-IPPStatus -ErrorAction SilentlyContinue; return ($s -and $s.IPPUrls.Count -gt 0) }
-                'Rollback' { return $true }
+                'Rollback' {
+                    $pre = $Script:ProviderPreState['IPP']
+                    if (-not $pre -or $pre.WasInstalled) { return $true }
+                    try {
+                        $svc = Get-Service -Name 'Spooler' -ErrorAction SilentlyContinue
+                        if ($svc -and $svc.Status -eq 'Running') {
+                            Set-ServiceConfiguration -ServiceName 'PrintNotify' -StartType Disabled -EnsureStopped -ErrorAction SilentlyContinue
+                        }
+                    } catch {}
+                    return $true
+                }
             }
         }
         'Registry' {
@@ -489,6 +629,12 @@ function Invoke-ConfigurationProvider {
                 'PlanChanges' { return ,@([PSCustomObject]@{ Action = 'Set print registry values' }) }
                 'ApplyChanges' {
                     $path = 'HKLM:\SYSTEM\CurrentControlSet\Control\Print'
+                    $preState = @{}
+                    $v1 = Get-ItemProperty -Path $path -Name 'RpcAuthnLevelPrivacyEnabled' -ErrorAction SilentlyContinue
+                    $preState.RpcAuthnLevelPrivacyEnabled = if ($v1) { $v1.RpcAuthnLevelPrivacyEnabled } else { $null }
+                    $v2 = Get-ItemProperty -Path $path -Name 'DisableHTTPPrinting' -ErrorAction SilentlyContinue
+                    $preState.DisableHTTPPrinting = if ($v2) { $v2.DisableHTTPPrinting } else { $null }
+                    $Script:ProviderPreState['Registry'] = $preState
                     if (-not (Test-Path -Path $path)) { $null = New-Item -Path $path -Force -ErrorAction SilentlyContinue }
                     Set-ItemProperty -Path $path -Name 'RpcAuthnLevelPrivacyEnabled' -Value $DesiredState.Registry.RpcAuthnLevelPrivacyEnabled -Type DWord -ErrorAction SilentlyContinue
                     Set-ItemProperty -Path $path -Name 'DisableHTTPPrinting' -Value $DesiredState.Registry.DisableHTTPPrinting -Type DWord -ErrorAction SilentlyContinue
@@ -499,17 +645,40 @@ function Invoke-ConfigurationProvider {
                     $v1 = Get-ItemProperty -Path $path -Name 'RpcAuthnLevelPrivacyEnabled' -ErrorAction SilentlyContinue
                     return ($null -eq $v1 -or $v1.RpcAuthnLevelPrivacyEnabled -eq $DesiredState.Registry.RpcAuthnLevelPrivacyEnabled)
                 }
-                'Rollback' { return $true }
+                'Rollback' {
+                    $pre = $Script:ProviderPreState['Registry']
+                    if (-not $pre) { return $true }
+                    $path = 'HKLM:\SYSTEM\CurrentControlSet\Control\Print'
+                    try {
+                        if ($null -ne $pre.RpcAuthnLevelPrivacyEnabled) {
+                            Set-ItemProperty -Path $path -Name 'RpcAuthnLevelPrivacyEnabled' -Value $pre.RpcAuthnLevelPrivacyEnabled -Type DWord -ErrorAction SilentlyContinue
+                        }
+                        if ($null -ne $pre.DisableHTTPPrinting) {
+                            Set-ItemProperty -Path $path -Name 'DisableHTTPPrinting' -Value $pre.DisableHTTPPrinting -Type DWord -ErrorAction SilentlyContinue
+                        }
+                    } catch {}
+                    return $true
+                }
             }
         }
         'Driver' {
             switch ($Phase) {
-                'GetCurrentState' { $d = if ($PrinterName) { Get-DriverIntelligence -PrinterName $PrinterName -ErrorAction SilentlyContinue } else { $null }; return [PSCustomObject]@{ Found = if ($d) { $d.DriverFound } else { $false } } }
+                'GetCurrentState' { $d = if ($PrinterName) { Get-DriverIntelligence -PrinterName $PrinterName -ErrorAction SilentlyContinue } else { $null }; return [PSCustomObject]@{ Found = if ($d) { $d.DriverFound } else { $false }; PrinterName = $PrinterName } }
                 'GetDesiredState' { return [PSCustomObject]@{ Found = $true } }
                 'PlanChanges' { $d = if ($PrinterName) { Get-DriverIntelligence -PrinterName $PrinterName -ErrorAction SilentlyContinue } else { $null }; if (-not ($d -and $d.DriverFound)) { return ,@([PSCustomObject]@{ Action = 'Ensure driver present' }) }; return @() }
-                'ApplyChanges' { return $true }  # Driver acquisition is handled by Windows PnP; no unsupported download
+                'ApplyChanges' {
+                    $d = if ($PrinterName) { Get-DriverIntelligence -PrinterName $PrinterName -ErrorAction SilentlyContinue } else { $null }
+                    $Script:ProviderPreState['Driver'] = @{ Found = if ($d) { $d.DriverFound } else { $false }; PrinterName = $PrinterName }
+                    Write-Log -Message 'Driver.ApplyChanges: driver acquisition is handled by Windows PnP — no automated download performed' -Level 'INFO'
+                    return $true
+                }
                 'Validate' { $d = if ($PrinterName) { Get-DriverIntelligence -PrinterName $PrinterName -ErrorAction SilentlyContinue } else { $null }; return ($d -and $d.DriverFound) }
-                'Rollback' { return $true }
+                'Rollback' {
+                    $pre = $Script:ProviderPreState['Driver']
+                    if (-not $pre) { return $true }
+                    Write-Log -Message "Driver.Rollback: driver state was Found=$($pre.Found) — no driver was installed by this provider, so no rollback needed" -Level 'INFO'
+                    return $true
+                }
             }
         }
         'Printer' {
@@ -517,9 +686,19 @@ function Invoke-ConfigurationProvider {
                 'GetCurrentState' { $usb = Get-UsbPrinterInfo -ErrorAction SilentlyContinue; return [PSCustomObject]@{ Detected = ($usb -and $usb.Count -gt 0); Name = if ($usb -and $usb.Count -gt 0) { $usb[0].PrinterName } else { '' } } }
                 'GetDesiredState' { return [PSCustomObject]@{ Detected = $true } }
                 'PlanChanges' { $usb = Get-UsbPrinterInfo -ErrorAction SilentlyContinue; if (-not ($usb -and $usb.Count -gt 0)) { return ,@([PSCustomObject]@{ Action = 'Detect USB printer' }) }; return @() }
-                'ApplyChanges' { return $true }
+                'ApplyChanges' {
+                    $usb = Get-UsbPrinterInfo -ErrorAction SilentlyContinue
+                    $Script:ProviderPreState['Printer'] = @{ Detected = ($usb -and $usb.Count -gt 0); Name = if ($usb -and $usb.Count -gt 0) { $usb[0].PrinterName } else { '' } }
+                    Write-Log -Message 'Printer.ApplyChanges: printer detection is read-only — no automated installation performed' -Level 'INFO'
+                    return $true
+                }
                 'Validate' { $usb = Get-UsbPrinterInfo -ErrorAction SilentlyContinue; return ($usb -and $usb.Count -gt 0) }
-                'Rollback' { return $true }
+                'Rollback' {
+                    $pre = $Script:ProviderPreState['Printer']
+                    if (-not $pre) { return $true }
+                    Write-Log -Message "Printer.Rollback: pre-state was Detected=$($pre.Detected) — no printer configuration was changed by this provider" -Level 'INFO'
+                    return $true
+                }
             }
         }
         default { throw "Unknown provider: $Provider" }
@@ -685,6 +864,8 @@ function Invoke-RecoveryEngine {
                 'Sharing' { $p = if ($PrinterName) { Get-Printer -Name $PrinterName -ErrorAction SilentlyContinue } else { Get-Printer -ErrorAction SilentlyContinue | Select-Object -First 1 }; if ($p) { Enable-PrinterSharing -PrinterName $p.Name -ErrorAction SilentlyContinue } }
                 'IPP' { Install-IPPServer -Force -ErrorAction SilentlyContinue }
                 'Registry' { $path = 'HKLM:\SYSTEM\CurrentControlSet\Control\Print'; Set-ItemProperty -Path $path -Name 'RpcAuthnLevelPrivacyEnabled' -Value 0 -Type DWord -ErrorAction SilentlyContinue; Set-ItemProperty -Path $path -Name 'DisableHTTPPrinting' -Value 0 -Type DWord -ErrorAction SilentlyContinue }
+                'Driver' { Write-Log -Message 'Recovery.Driver: driver re-acquisition requires user intervention (Windows PnP)' -Level 'WARN' }
+                'Printer' { Write-Log -Message 'Recovery.Printer: printer re-detection requires user intervention (connect USB)' -Level 'WARN' }
             }
         }.GetNewClosure()
         $valSb = {
@@ -696,6 +877,8 @@ function Invoke-RecoveryEngine {
                 'Sharing' { $p = if ($PrinterName) { Get-Printer -Name $PrinterName -ErrorAction SilentlyContinue } else { Get-Printer -ErrorAction SilentlyContinue | Where-Object { $_.Shared } | Select-Object -First 1 }; return ($p -and $p.Shared) }
                 'IPP' { $s = Get-IPPStatus -ErrorAction SilentlyContinue; return ($s -and $s.IPPUrls.Count -gt 0) }
                 'Registry' { $v = Get-ItemProperty -Path 'HKLM:\SYSTEM\CurrentControlSet\Control\Print' -Name 'RpcAuthnLevelPrivacyEnabled' -ErrorAction SilentlyContinue; return ($null -eq $v -or $v.RpcAuthnLevelPrivacyEnabled -eq 0) }
+                'Driver' { $d = if ($PrinterName) { Get-DriverIntelligence -PrinterName $PrinterName -ErrorAction SilentlyContinue } else { $null }; return ($d -and $d.DriverFound) }
+                'Printer' { $usb = Get-UsbPrinterInfo -ErrorAction SilentlyContinue; return ($usb -and $usb.Count -gt 0) }
                 default { return $true }
             }
         }.GetNewClosure()
@@ -762,4 +945,4 @@ function Get-OrchestrationReport {
     }
 }
 
-Export-ModuleMember -Function Subscribe-OrchestrationEvent, Publish-OrchestrationEvent, Set-SubsystemState, Get-SubsystemState, New-OrchestrationTask, Get-TopologicalTaskOrder, Start-OrchestrationTransaction, Record-TaskTransaction, Get-OrchestrationTransactionLog, Get-DefaultDesiredState, Get-DesiredState, Invoke-ConfigurationProvider, Invoke-Orchestrator, Invoke-RecoveryEngine, Get-OrchestrationReport
+Export-ModuleMember -Function Subscribe-OrchestrationEvent, Publish-OrchestrationEvent, Get-OrchestrationEventLog, Set-SubsystemState, Get-SubsystemState, Get-OrchestrationStateReport, Reset-OrchestrationState, New-OrchestrationTask, Get-TopologicalTaskOrder, Start-OrchestrationTransaction, Record-TaskTransaction, Get-OrchestrationTransactionLog, Get-DefaultDesiredState, Get-DesiredState, Invoke-ConfigurationProvider, Invoke-Orchestrator, Invoke-RecoveryEngine, Get-OrchestrationReport

@@ -35,7 +35,7 @@ function Initialize-RepairRollback {
         RollbackPath    = $rollbackPath
         CreatedAt       = (Get-Date -Format 'yyyy-MM-dd HH:mm:ss')
         ComputerName    = $env:COMPUTERNAME
-        ToolkitVersion  = '8.0.0'
+        ToolkitVersion  = '8.2.0'
     }
     $manifest | ConvertTo-Json | Out-File -FilePath (Join-Path $rollbackPath 'manifest.json') -Encoding UTF8
 

@@ -1,6 +1,10 @@
 # PrinterToolkit — Distribution Guide
 
-**Version:** 5.0.1
+> **⚠️ OUTDATED — describes v5.0.1 distribution.**
+> The current release is **v8.2.0-rc1**. Version references, module counts, and release assets
+> described here are stale. See `docs/v8.2/` for current release information.
+
+**Version:** 5.0.1 (stale — v8.2.0-rc1 is current)
 **Date:** 2026-07-14
 **Audience:** End users, IT administrators, DevOps engineers
 

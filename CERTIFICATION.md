@@ -1,5 +1,10 @@
 # PrinterToolkit v5.0.1 — Production Certification Report
 
+> **⚠️ HISTORICAL DOCUMENT — v5.0.1 (not current)**
+> This certification applies to **PrinterToolkit v5.0.1 only**.
+> The current release is **v8.2.0-rc1** — see `Certification/` and `docs/v8.2/` for current certification status.
+> **This document does not describe the current codebase.** Do not infer any runtime success for v8.x from this report.
+
 **Date:** 2026-07-14
 **Version:** 5.0.1
 
@@ -187,6 +192,6 @@
 | CI/CD | 5% | 5/5 | GitHub Actions with test/build/release pipeline, no redundant installs |
 | Release Readiness | 5% | 5/5 | ZIP + SHA-256 + release notes + migration guide + bootstrap |
 
-**Verdict: ✅ CERTIFIED — PrinterToolkit v5.0.1 Stable**
+**Verdict: ✅ CERTIFIED — PrinterToolkit v5.0.1 Stable (historical — does not apply to v8.x)**
 
-17 of 21 independent adversarial audit findings resolved. 4 documented as intentional design choices (M7, L2) or environment limitations (known limitations 1, 3-5). No critical or high issues remain open.
+17 of 21 independent adversarial audit findings resolved. 4 documented as intentional design choices (M7, L2) or environment limitations (known limitations 1, 3-5). No critical or high issues remain open at time of v5.0.1 release.

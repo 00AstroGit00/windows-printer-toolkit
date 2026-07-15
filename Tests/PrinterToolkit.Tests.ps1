@@ -1,6 +1,6 @@
 <#
 .SYNOPSIS
-    Pester tests for PrinterToolkit v7.0 modules.
+    Pester tests for PrinterToolkit v8.2.0-rc1.
 
 .DESCRIPTION
     Run: Invoke-Pester -Path .\Tests\PrinterToolkit.Tests.ps1
@@ -10,7 +10,7 @@
 
 .NOTES
     Target: 95% functional coverage
-    Version: 8.0.0
+    Version: 8.2.0
 #>
 
 BeforeAll {
@@ -26,16 +26,16 @@ AfterAll {
     }
 }
 
-Describe 'Module Loading - v7.0' {
+Describe 'Module Loading - v8.2' {
     It 'Should load the root module' {
         Get-Module PrinterToolkit | Should -Not -BeNullOrEmpty
     }
 
-    It 'Should have version 8.0.0' {
-        (Get-Module PrinterToolkit).Version | Should -Be '8.0.0'
+    It 'Should have version 8.2.0' {
+        (Get-Module PrinterToolkit).Version | Should -Be '8.2.0'
     }
 
-    It 'Should export all v7.0 required functions' {
+    It 'Should export all v8.2 required functions' {
         $required = @(
             'Get-ToolkitStatus', 'Invoke-ToolkitMainMenu',
             'Get-PrinterStatus', 'Get-Printers', 'Set-DefaultPrinter',
@@ -76,7 +76,13 @@ Describe 'Module Loading - v7.0' {
             'Start-ZeroTouchDeployment', 'Invoke-GuidedRecovery', 'Get-DeploymentHealth',
             'Get-ClientConnectionInfo', 'Get-ZeroTouchDashboard',
             'Start-DeploymentTransaction', 'Write-TransactionLog', 'Complete-DeploymentTransaction', 'Get-TransactionLogPath',
-            'Test-DriverSignature'
+            'Test-DriverSignature',
+            'New-OrchestrationTask', 'Get-TopologicalTaskOrder',
+            'Subscribe-OrchestrationEvent', 'Publish-OrchestrationEvent', 'Get-OrchestrationEventLog',
+            'Set-SubsystemState', 'Get-SubsystemState', 'Get-OrchestrationStateReport', 'Reset-OrchestrationState',
+            'Start-OrchestrationTransaction', 'Record-TaskTransaction', 'Get-OrchestrationTransactionLog',
+            'Get-DefaultDesiredState', 'Get-DesiredState',
+            'Invoke-ConfigurationProvider', 'Invoke-Orchestrator', 'Invoke-RecoveryEngine', 'Get-OrchestrationReport'
         )
         foreach ($f in $required) {
             Get-Command -Name $f -Module PrinterToolkit -ErrorAction SilentlyContinue | Should -Not -BeNullOrEmpty
@@ -314,9 +320,9 @@ Describe 'Utilities Module' {
         $result.ComputerName | Should -Be $env:COMPUTERNAME
     }
 
-    It 'Get-SystemInfo should report v8.0.0' {
+    It 'Get-SystemInfo should report v8.2.0' {
         $result = Get-SystemInfo
-        $result.ToolkitVersion | Should -Be '8.0.0'
+        $result.ToolkitVersion | Should -Be '8.2.0'
     }
 
     It 'Assert-Elevated should not throw when admin' {
@@ -530,9 +536,9 @@ Describe 'Bundle Module' {
 }
 
 Describe 'Toolkit Status' {
-    It 'Get-ToolkitStatus should show version 8.0.0' {
+    It 'Get-ToolkitStatus should show version 8.2.0' {
         $status = Get-ToolkitStatus
-        $status.Version | Should -Be '8.0.0'
+        $status.Version | Should -Be '8.2.0'
         $status.LoadedModules.Count | Should -BeGreaterThan 0
     }
 
@@ -545,13 +551,13 @@ Describe 'Toolkit Status' {
         Get-Command Invoke-ToolkitMainMenu -ErrorAction SilentlyContinue | Should -Not -BeNullOrEmpty
     }
 
-    It 'All loaded modules should be v7.0 compatible' {
+    It 'All loaded modules should be v8.2 compatible' {
         $status = Get-ToolkitStatus
         $status.FailedModules.Count | Should -Be 0
     }
 }
 
-Describe 'v7.0 Zero-Touch Deployment Engine' {
+Describe 'v8.2 Zero-Touch Deployment Engine' {
     It 'Zero-Touch public functions should exist' {
         foreach ($f in @(
             'Start-ZeroTouchDeployment', 'Invoke-GuidedRecovery', 'Get-DeploymentHealth',
@@ -607,14 +613,14 @@ Describe 'v7.0 Zero-Touch Deployment Engine' {
     }
 }
 
-Describe 'Orchestration Engine - v8.0' {
+Describe 'Orchestration Engine - v8.2' {
     It 'Should export orchestration functions' {
         foreach ($f in @(
             'New-OrchestrationTask', 'Get-TopologicalTaskOrder', 'Invoke-Orchestrator',
             'Invoke-ConfigurationProvider', 'Get-DesiredState', 'Get-DefaultDesiredState',
             'Start-OrchestrationTransaction', 'Invoke-RecoveryEngine', 'Get-OrchestrationReport',
-            'Subscribe-OrchestrationEvent', 'Publish-OrchestrationEvent',
-            'Set-SubsystemState', 'Get-SubsystemState')) {
+            'Subscribe-OrchestrationEvent', 'Publish-OrchestrationEvent', 'Get-OrchestrationEventLog',
+            'Set-SubsystemState', 'Get-SubsystemState', 'Get-OrchestrationStateReport', 'Reset-OrchestrationState')) {
             Get-Command -Name $f -Module PrinterToolkit -ErrorAction SilentlyContinue | Should -Not -BeNullOrEmpty
         }
     }
@@ -682,5 +688,42 @@ Describe 'Orchestration Engine - v8.0' {
         $ds = Get-DesiredState
         $ds | Should -Not -BeNullOrEmpty
         $ds.PSObject.Properties.Name -contains 'Services' | Should -Be $true
+    }
+
+    It 'Get-OrchestrationEventLog should return event log with count' {
+        Publish-OrchestrationEvent -EventName 'TestEvent' -Data @{ x = 1 }
+        $log = Get-OrchestrationEventLog
+        $log.EventCount -is [int] | Should -Be $true
+        $log.Events -is [array] | Should -Be $true
+    }
+
+    It 'Get-OrchestrationEventLog should filter by EventName' {
+        $filtered = Get-OrchestrationEventLog -EventName 'TestEvent'
+        $filtered.EventCount | Should -BeGreaterThan 0
+        $filtered.Events[0].EventName | Should -Be 'TestEvent'
+    }
+
+    It 'Get-OrchestrationStateReport should return state summary with health score' {
+        Set-SubsystemState -Subsystem 'TestSub' -State 'Healthy' -Detail 'ok'
+        $report = Get-OrchestrationStateReport
+        $report.TotalSubsystems -is [int] | Should -Be $true
+        $report.Healthy | Should -BeGreaterThan 0
+        $report.OverallHealth | Should -Not -BeNullOrEmpty
+        $report.HealthScore -is [double] | Should -Be $true
+        $report.SubsystemStates -is [array] | Should -Be $true
+    }
+
+    It 'Reset-OrchestrationState should clear all state' {
+        Set-SubsystemState -Subsystem 'ResetTest' -State 'Healthy'
+        Reset-OrchestrationState
+        $s = Get-SubsystemState -Subsystem 'ResetTest'
+        $s.State | Should -Be 'Unknown'
+    }
+
+    It 'Reset-OrchestrationState -KeepTransactionLog should preserve transaction log' {
+        Start-OrchestrationTransaction
+        Reset-OrchestrationState -KeepTransactionLog
+        $log = Get-OrchestrationTransactionLog
+        $log.Id | Should -Be $null  # no active transaction
     }
 }

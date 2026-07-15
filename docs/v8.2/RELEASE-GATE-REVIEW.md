@@ -102,6 +102,11 @@
 | R9 | Deployment | Low | Requires elevated rights; not enforced | No |
 | R10 | Maintenance | Low | Provider Rollback stub adds future maintenance | No |
 
+**Resolved this pass:**
+- **R3 (L1) — Rollback stubs:** All 6 state-changing providers now capture pre-state and implement actual undo logic. Driver and Printer providers remain no-ops (no state committed).
+- **R5 (S5) — Admin guard:** Root module now warns on non-elevated import via direct Windows API check.
+- **R8 (Cosmetic) — Version mismatch:** All version strings harmonized to `8.2.0`.
+
 **Release-blocking risks:** R1, R2. These prevent a **Stable** tag but are acceptable for an **RC** with explicit limitations disclosed.
 
 ---
@@ -126,8 +131,8 @@
 4. Phase 4: **second client** connects via Shared + IPP; capture `Get-ConnectionInfo` + client `Connect-NetworkPrinter` success; confirm firewall rules Enabled (Private).
 5. Phase 5: run `Tests/v8.2.FailureInjection.ps1` on each target → collect `failure_injection.json`; confirm recovery for scenarios 1–3.
 6. Phase 6: run `Tests/v8.2.Benchmark.ps1` (5 iters) on each target → collect `benchmark.json`; confirm within thresholds.
-7. Resolve/reconcile **L1** (implement per-provider Rollback or document out-of-scope) and apply **S5** (admin guard) before Stable.
-8. Execute **Phase 9** user-doc updates; bump root + Rollback manifest to `8.2.0`; finalize CHANGELOG wording per §2.
+7. ~~Resolve/reconcile **L1** (implement per-provider Rollback or document out-of-scope) and apply **S5** (admin guard) before Stable.~~ ✅ **DONE**
+8. Execute **Phase 9** user-doc updates; ~~bump root + Rollback manifest to `8.2.0`;~~ finalize CHANGELOG wording per §2.
 9. Commit branch `feature/v8-orchestration-engine`; tag `v8.2.0-rc1`.
 10. Re-run this gate; promote RC→Stable only when R1/R2 are closed by evidence.
 

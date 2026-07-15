@@ -1,6 +1,6 @@
 <#
 .SYNOPSIS
-    Release packaging script for PrinterToolkit v5.0.1.
+    Release packaging script for PrinterToolkit.
 
 .DESCRIPTION
     Creates a clean release ZIP archive from the built artifacts,
@@ -10,13 +10,13 @@
     Path to the build output (from build.ps1).
 
 .PARAMETER Version
-    Version string for the release. Default: 5.0.1.
+    Version string for the release. Default: from manifest.
 
 .PARAMETER OutputDir
     Where to place the final release ZIP.
 
 .EXAMPLE
-    .\CI\package.ps1 -ArtifactPath .\artifacts\PrinterToolkit_v5.0.1_20260714 -Version 5.0.1
+    .\CI\package.ps1 -ArtifactPath .\artifacts\PrinterToolkit_v8.2.0_20260714 -Version 8.2.0
 #>
 
 [CmdletBinding()]
@@ -24,7 +24,7 @@ param(
     [Parameter(Mandatory = $true)]
     [ValidateScript({ Test-Path $_ })]
     [string]$ArtifactPath,
-    [string]$Version = '5.0.1',
+    [string]$Version = '8.2.0',
     [string]$OutputDir
 )
 
@@ -72,20 +72,11 @@ $releaseNotes = @"
 Enterprise Windows printer troubleshooting and management toolkit.
 
 ## What's New
-- Production-quality error handling with structured result objects
-- Comprehensive logging framework (file, console, rotating)
-- Type 4 driver detection and migration recommendations
-- IPP class driver detection
-- Android Mopria compatibility analysis
-- Spooler integrity validation (files, registry, services)
-- WSD printer discovery
-- SMB 1.0/2.0/3.0 protocol detection
-- 8-step automatic share repair with backup/rollback
-- Professional HTML/JSON/CSV reporting with compliance checks
-- Diagnostic bundle (ZIP archive of all system data)
-- Driver export/restore with INF extraction
-- Share permission management
-- Transport switching: SMB, IPP, WSD
+- v8.2.0-rc1: Dependency-aware DAG orchestration engine with event bus, state manager, transaction log, and recovery
+- v8.1: Native Windows Integration Layer (NetSecurity, CIM, DISM — no netsh/rundll32/pnputil)
+- v8.0: Declarative task model with retry/timeout/elevation; configuration providers (Service, Firewall, Network, Sharing, IPP, Registry, Driver, Printer)
+- v7.0: Zero-Touch one-click deployment with transaction logging and guided recovery
+- v6.0: Print Server Platform with USB detection, driver intelligence, sharing, IPP, SMB, validation, rollback, QR codes
 
 ## Files
 | File | Description |
@@ -93,7 +84,7 @@ Enterprise Windows printer troubleshooting and management toolkit.
 | PrinterToolkit.psd1 | Module manifest |
 | PrinterToolkit.psm1 | Root module |
 | launcher.ps1 | Standalone entry point |
-| Modules/ | 11 submodules |
+| Modules/ | 21 submodules |
 
 ## Installation
 Import the module or run launcher.ps1.

@@ -4,9 +4,10 @@
 
 | Version | Supported |
 |---------|-----------|
-| 5.0.x   | Yes       |
-| 4.1.x   | No        |
-| < 4.1   | No        |
+| 8.2.x   | Yes (RC — runtime pending) |
+| 5.0.x   | Yes (end-of-life)          |
+| 4.1.x   | No                         |
+| < 4.1   | No                         |
 
 ## Reporting a Vulnerability
 

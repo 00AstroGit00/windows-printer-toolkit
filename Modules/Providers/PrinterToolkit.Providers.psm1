@@ -22,7 +22,7 @@
 
 .NOTES
     Module: PrinterToolkit.Providers
-    Version: 8.1.0
+    Version: 8.2.0
     Author: PrinterToolkit Contributors
 #>
 

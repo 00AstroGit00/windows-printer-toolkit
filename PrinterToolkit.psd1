@@ -1,6 +1,6 @@
 @{
     RootModule           = 'PrinterToolkit.psm1'
-    ModuleVersion        = '8.0.0'
+    ModuleVersion        = '8.2.0'
     GUID                 = 'e8c4a1d7-2b9f-4e3c-9a0d-6f8b1c5d7e3a'
     Author               = 'PrinterToolkit Contributors'
     CompanyName          = 'PrinterToolkit'
@@ -31,7 +31,7 @@
         'Modules/Logging/PrinterToolkit.Logging.psm1',
         'Modules/Utilities/PrinterToolkit.Utilities.psm1',
         'Modules/Bundle/PrinterToolkit.Bundle.psm1',
-        'Modules/ZeroTouch/PrinterToolkit.ZeroTouch.psm1'
+        'Modules/ZeroTouch/PrinterToolkit.ZeroTouch.psm1',
         'Modules/Orchestration/PrinterToolkit.Orchestration.psm1'
     )
 
@@ -92,7 +92,7 @@
             ProjectUri   = 'https://github.com/00AstroGit00/windows-printer-toolkit'
             IconUri      = 'https://raw.githubusercontent.com/00AstroGit00/windows-printer-toolkit/main/.github/images/icon.png'
             ReleaseNotes = @'
-## 8.0.0 - Dependency-Aware Orchestration Engine
+## 8.2.0 - Dependency-Aware Orchestration Engine (RC)
 - Introduced v8 orchestration platform: all operations modeled as declarative Tasks with dependencies, prerequisites, retry, and rollback
 - New DAG resolver (Get-TopologicalTaskOrder) with cycle detection for deterministic execution order
 - New Event Bus for structured, subscribable deployment events

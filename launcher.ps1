@@ -1,6 +1,6 @@
 <#
 .SYNOPSIS
-    PrinterToolkit v5.0.1 - Standalone launcher script for direct execution.
+    PrinterToolkit v8.2.0-rc1 - Standalone launcher script for direct execution.
 
 .DESCRIPTION
     Entry point that imports the PrinterToolkit module and launches the
@@ -45,8 +45,8 @@ try {
 }
 
 if (-not $Quiet) {
-    $host.UI.RawUI.WindowTitle = "PrinterToolkit v8.0.0 - Print Server Deployment Platform"
-Write-Host 'PrinterToolkit v8.0.0' -ForegroundColor Cyan
+    $host.UI.RawUI.WindowTitle = "PrinterToolkit v8.2.0-rc1 - Print Server Deployment Platform"
+Write-Host 'PrinterToolkit v8.2.0-rc1' -ForegroundColor Cyan
 Write-Host 'Print Server Deployment Platform' -ForegroundColor Gray
     $status = Get-ToolkitStatus
     Write-Host "Loaded $($status.LoadedModules.Count) module(s)" -ForegroundColor Gray

@@ -39,7 +39,7 @@ function Start-DeploymentTransaction {
     $meta = [PSCustomObject]@{
         TransactionId   = $Script:TransactionId
         StartedAt       = (Get-Date -Format 'yyyy-MM-dd HH:mm:ss')
-        ToolkitVersion  = '8.0.0'
+        ToolkitVersion  = '8.2.0'
     }
     $meta | ConvertTo-Json | Out-File -FilePath (Join-Path $Script:TransactionDir 'transaction.json') -Encoding UTF8
     Write-TransactionLog -Category Operation -Message 'Transaction started' -Data $meta
@@ -705,7 +705,7 @@ function Get-ZeroTouchDashboard {
     if (-not $ipp -or $ipp.IPPUrls.Count -eq 0) { $null = $recommended.Add('Run Start-ZeroTouchDeployment or enable IPP.') }
 
     [PSCustomObject]@{
-        Title           = 'PrinterToolkit v7.0 Zero-Touch Dashboard'
+        Title           = 'PrinterToolkit v8.2.0 Zero-Touch Dashboard'
         Timestamp       = Get-Date
         PrinterStatus   = $printerStatus
         Driver          = if ($driver) { [PSCustomObject]@{ Found = $driver.DriverFound; Name = $driver.DriverName; Signed = $driver.IsSigned; Type = $driver.DriverType } } else { $null }

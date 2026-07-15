@@ -18,10 +18,17 @@
 - Orchestrator (`Invoke-ConfigurationProvider` 6-phase model) unchanged and stable.
 - `docs/v8.1-provider-matrix.md` written.
 
-## v8.2.0 (this session — static portion)
+## v8.2.0 (this session — static + pre-Stable items)
 - **Provider Certification (Phase 2):** static review of all 8 providers + Validation.
-  All use supported APIs; structured returns; native recovery; idempotent. Two tracked
-  limitations: L1 (orchestrator Rollback stub) and L2 (error-model partial coverage).
+  All use supported APIs; structured returns; native recovery; idempotent. Tracked
+  limitation: L2 (error-model partial coverage).
+- **L1 resolved:** Per-provider `Rollback` phase now captures pre-state and restores
+  original configuration for Service, Firewall, Network, Sharing, IPP, and Registry
+  providers. Driver and Printer remain no-ops (no state changes committed).
+- **S5 resolved:** Admin elevation check added at root module load time (warning on
+  non-elevated import) in addition to existing UI warnings.
+- **Version harmonization:** All version strings bumped to `8.2.0` across root psd1,
+  psm1, Utilities, ZeroTouch, Rollback, Providers, and Rollback modules.
 - **Security Review (Phase 7):** no Critical/High findings. Removed `rundll32`/`netsh`
   reduced attack surface; driver signature check present; bounded external-tool use.
 - **Compatibility Matrix (Phase 8):** Windows 10 22H2 / 11 23H2 / 24H2 × PS 5.1/7.x;
@@ -37,6 +44,5 @@
 
 ## Pending (blocked on Windows host)
 - Runtime evidence for Phases 1, 3, 4, 5, 6.
-- Version bump to 8.2.0 (root + Rollback manifest) at sign-off.
 - User-facing doc updates (Phase 9).
 - Commit of branch `feature/v8-orchestration-engine`.

@@ -129,7 +129,7 @@ function Get-PrinterReportData {
         Type3Drivers     = @($drivers | Where-Object { $_.MajorVersion -lt 4 }).Count
         TotalPorts       = $ports.Count
         PrinterDetails   = @($printerDetail)
-        ToolkitVersion   = '6.0.0'
+        ToolkitVersion = '8.2.0'
     }
 }
 

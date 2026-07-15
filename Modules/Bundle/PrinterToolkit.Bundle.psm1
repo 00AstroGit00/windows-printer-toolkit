@@ -174,7 +174,7 @@ function New-DiagnosticBundle {
         $manifest = [PSCustomObject]@{
             GeneratedAt    = Get-Date -Format 'yyyy-MM-dd HH:mm:ss'
             ComputerName   = $env:COMPUTERNAME
-            ToolkitVersion = '6.0.0'
+            ToolkitVersion = '8.2.0'
             FileCount      = $allFiles.Count
             TotalSizeKB    = [math]::Round(($allFiles | Measure-Object -Property Length -Sum).Sum / 1KB, 1)
         }
